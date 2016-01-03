@@ -121,7 +121,6 @@ def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=
                     else:
                         error_counter[(str(tags1), str(tags2))] += 1
                         if verbose:
-                            # hard coded strings were changed to EdgeTags.??? need to check that it still works!!!!!
                             if (EdgeTags.Elaborator in tags1 and EdgeTags.Center in tags2) or \
                                (EdgeTags.Center in tags1 and EdgeTags.Elaborator in tags2):
                                 print(EdgeTags.Center + '-' + EdgeTags.Elaborator, to_text(passage1, y))
@@ -132,7 +131,6 @@ def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=
                             elif (EdgeTags.Participant in tags1 and EdgeTags.Elaborator in tags2) or \
                                  (EdgeTags.Elaborator in tags1 and EdgeTags.Participant in tags2):
                                 print(EdgeTags.Participant +'-' + EdgeTags.Elaborator, to_text(passage1, y))
-
         return mutual_ys, error_counter
 
     map2, map2_remotes = create_passage_yields(passage2, not separate_remotes)
@@ -141,7 +139,6 @@ def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=
         return set(), set(), set(map2.keys()), set(), set(), set(map2_remotes.keys()), Counter()
 
     map1, map1_remotes = create_passage_yields(passage1, not separate_remotes)
-
     output, errors = _find_mutuals(map1, map2)
     output_remotes = None
     if separate_remotes:
@@ -259,10 +256,13 @@ def get_scores(p1, p2, eval_type, units, fscore, errors, verbose=True):
     :param verbose: whether to print the scores
     :returns Results object if fscore is True, otherwise None
     """
+    verbose_message = "Common disagreement:\nTag1|(or)Tag2-(instead of)Tag3 sentence beginning {point of disagreement} sentence end"
+    if verbose and eval_type != UNLABELED:
+        print(verbose_message)
     mutual, all1, all2, mutual_rem, all1_rem, all2_rem, err_counter = \
         mutual_yields(p1, p2, eval_type, verbose=verbose)
     if verbose:
-        print("Evaluation type: (" + eval_type + ")")
+        print("\nEvaluation type: (" + eval_type + ")")
     res = None
     
     if verbose and units and p1 is not None:
@@ -344,5 +344,5 @@ def print_aggregate(results):
     :param results: iterable of dictionaries of evaluation types to Results objects
     """
     for t, r in aggregate(results).items():
-        print("Evaluation type: (" + t + ")")
+        print("\nEvaluation type: (" + t + ")")
         r.print()
