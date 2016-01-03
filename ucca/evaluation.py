@@ -103,6 +103,7 @@ def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=
     -- the set of yields of passage1
     -- the set of yields of passage2
     """
+    
     def _find_mutuals(m1, m2):
         mutual_ys = set()
         error_counter = Counter()
@@ -121,8 +122,7 @@ def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=
                     else:
                         error_counter[(str(tags1), str(tags2))] += 1
                         if verbose:
-                            if (EdgeTags.Elaborator in tags1 and EdgeTags.Center in tags2) or \
-                               (EdgeTags.Center in tags1 and EdgeTags.Elaborator in tags2):
+                            if tagged_as(tags1, tags2, {EdgeTags.Elaborator}, {EdgeTags.Center}):
                                 print(EdgeTags.Center + '-' + EdgeTags.Elaborator, to_text(passage1, y))
                             elif (EdgeTags.Process in tags1 and EdgeTags.Center in tags2) or \
                                  (EdgeTags.Center in tags1 and {EdgeTags.Process, EdgeTags.State} & tags2):
@@ -131,6 +131,8 @@ def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=
                             elif (EdgeTags.Participant in tags1 and EdgeTags.Elaborator in tags2) or \
                                  (EdgeTags.Elaborator in tags1 and EdgeTags.Participant in tags2):
                                 print(EdgeTags.Participant +'-' + EdgeTags.Elaborator, to_text(passage1, y))
+                            elif tagged_as(tags1, tags2, {EdgeTags.Adverbial}, {EdgeTags.Elaborator}):
+                                print(EdgeTags.Adverbial +'-' + EdgeTags.Elaborator, to_text(passage1, y))
         return mutual_ys, error_counter
 
     map2, map2_remotes = create_passage_yields(passage2, not separate_remotes)
