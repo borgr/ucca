@@ -86,6 +86,14 @@ def to_text(p, terminal_indices):
     return ' '.join(pre_context) + ' { ' + ' '.join(words) + ' } ' + ' '.join(post_context)
 
 
+def tagged_as(tags1, tags2, tag1, tag2):
+    """" checks if the set of tags tags1 contains tag1 and tags2 tag2 or vice versa
+        ARGS:
+        tags1, tags2, tag1, tag2 - are ALL sets of tags
+    """
+    return(tag1 & tags1 and tag2 & tags2) or (tag2 & tags1 and tag1 & tags2)
+
+
 def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=True):
     """
     returns a set of all the yields such that both passages have a unit with that yield.
@@ -124,19 +132,16 @@ def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=
                         if verbose:
                             if tagged_as(tags1, tags2, {EdgeTags.Elaborator}, {EdgeTags.Center}):
                                 print(EdgeTags.Center + '-' + EdgeTags.Elaborator, to_text(passage1, y))
-                            elif (EdgeTags.Process in tags1 and EdgeTags.Center in tags2) or \
-                                 (EdgeTags.Center in tags1 and {EdgeTags.Process, EdgeTags.State} & tags2):
+                            elif tagged_as(tags1, tags2, {EdgeTags.Process, EdgeTags.State}, {EdgeTags.Center}):
                                 print(EdgeTags.Process + '|' + EdgeTags.State + '-' + EdgeTags.Center,
                                       to_text(passage1, y))
-                            elif (EdgeTags.Participant in tags1 and EdgeTags.Elaborator in tags2) or \
-                                 (EdgeTags.Elaborator in tags1 and EdgeTags.Participant in tags2):
+                            elif tagged_as(tags1, tags2, {EdgeTags.Participant}, {EdgeTags.Elaborator}):
                                 print(EdgeTags.Participant +'-' + EdgeTags.Elaborator, to_text(passage1, y))
                             elif tagged_as(tags1, tags2, {EdgeTags.Adverbial}, {EdgeTags.Elaborator}):
                                 print(EdgeTags.Adverbial +'-' + EdgeTags.Elaborator, to_text(passage1, y))
         return mutual_ys, error_counter
 
     map2, map2_remotes = create_passage_yields(passage2, not separate_remotes)
-
     if passage1 is None:
         return set(), set(), set(map2.keys()), set(), set(), set(map2_remotes.keys()), Counter()
 
@@ -149,6 +154,18 @@ def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=
     return (output, set(map1.keys()), set(map2.keys()),
             output_remotes, set(map1_remotes.keys()), set(map2_remotes.keys()),
             errors)
+
+def get_terminal_by_tag(fnode, tag, punct, remote_terminals, terminals = None):
+    """ creates a set of all terminals under specific tag in the tree (recursivly)"""
+    if not terminals:
+        terminals = set()
+    if fnode.tag == NodeTags.Foundational:
+        for node in fnode.children:
+            if node.tag == NodeTags.Foundational and node.ftag == EdgeTags.Function:
+                terminals.union(node.get_terminals(punct=False, remotes=remote_terminals))
+            else:
+                terminals.union(get_terminal_by_tag(node, tag, punct, remote_terminals))
+    return terminals
 
 
 def create_passage_yields(p, remote_terminals=False):
@@ -171,12 +188,12 @@ def create_passage_yields(p, remote_terminals=False):
    
     table_reg, table_remote = dict(), dict()
     for e in edges:
-        pos = frozenset(t.position for t in e.child.get_terminals(punct=False, remotes=remote_terminals))
+        pos = frozenset(t.position for t in e.child.get_terminals(punct=False, remotes=remote_terminals)
+                        if t not in get_terminal_by_tag(e.child, EdgeTags.Function, False, remote_terminals))
         if e.attrib.get("remote"):
             table_remote[pos] = table_remote.get(pos, []) + [e]
         else:
             table_reg[pos] = table_reg.get(pos, []) + [e]
-
     return table_reg, table_remote
 
 
