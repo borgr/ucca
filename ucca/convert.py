@@ -118,7 +118,8 @@ class SiteCfg:
                      'Ground': EdgeTags.Ground,
                      'Connector': EdgeTags.Connector,
                      'Role Marker': EdgeTags.Relator,
-                     'Relator': EdgeTags.Relator}
+                     'Relator': EdgeTags.Relator,
+                     'Time': EdgeTags.Time}
 
     EdgeConversion = {EdgeTags.ParallelScene: 'Parallel Scene',
                       EdgeTags.Function: 'Function',
@@ -131,7 +132,8 @@ class SiteCfg:
                       EdgeTags.Linker: 'Linker',
                       EdgeTags.Ground: 'Ground',
                       EdgeTags.Connector: 'Connector',
-                      EdgeTags.Relator: 'Relator'}
+                      EdgeTags.Relator: 'Relator',
+                      EdgeTags.Time: 'Time'}
 
 
 class SiteUtil:
