@@ -13,7 +13,7 @@ class Weights(object):
     def __init__(self, num_labels, weights=None):
         self.num_labels = num_labels
         if weights is None:
-            self.weights = 0.01 * np.random.randn(num_labels)
+            self.weights = np.zeros(num_labels, dtype=float)  # 0.01 * np.random.randn(num_labels)
             self.update_count = 0
             self._last_update = np.zeros(num_labels, dtype=int)
             self._totals = np.zeros(num_labels, dtype=float)
