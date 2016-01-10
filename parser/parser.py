@@ -110,7 +110,7 @@ class Parser(object):
             try:
                 self.parse_passage(history, train)  # This is where the actual parsing takes place
             except AssertionError as e:
-                if train:
+                if mode in ("train", "dev"):
                     raise
                 if Config().verbose:
                     print(e)
@@ -183,18 +183,18 @@ class Parser(object):
             if Config().check_loops and history is not None:
                 self.check_loop(history, train)
 
-            true_actions = None
+            true_actions = []
             if self.oracle is not None:
                 try:
                     true_actions = self.oracle.get_actions(self.state)
-                except AttributeError as e:
+                except (AttributeError, AssertionError) as e:
                     if train:
                         raise Exception("Error in oracle during training") from e
 
             features = self.feature_extractor.extract_features(self.state)
             predicted_action = self.predict_action(features, true_actions)
             action = predicted_action
-            if true_actions is None:
+            if not true_actions:
                 true_actions = "?"
             elif predicted_action in true_actions:
                 self.correct_count += 1

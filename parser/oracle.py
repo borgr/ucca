@@ -24,13 +24,16 @@ class Oracle(object):
         :return: list of Action items to perform
         """
         actions = []
+        invalid = []
         for action in self.generate_actions(state):
             try:
                 state.assert_valid(action)
+                actions.append(action)
             except AssertionError as e:
-                raise AssertionError("Oracle returned invalid action: %s" % action) from e
-            actions.append(action)
-        assert actions, "Oracle found no action\n" + state.str("\n") + "\n" + self.str("\n")
+                invalid.append((action, e))
+        assert actions, "\n".join(["Oracle found no valid action",
+                                   state.str("\n"), self.str("\n")] +
+                                  ["%s: %s" % (action, e) for (action, e) in invalid])
         return actions
 
     def generate_actions(self, state):
