@@ -114,7 +114,7 @@ class Parser(object):
                     raise
                 if Config().verbose:
                     print(e)
-                print("passage %s:\n%s" % (passage_id, e), file=Config().log_file)
+                print("passage %s:\n%s" % (passage_id, e), file=Config().log_file, flush=True)
                 print("failed")
                 failed = True
             predicted_passage = passage
