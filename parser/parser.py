@@ -106,6 +106,7 @@ class Parser(object):
             self.state = State(passage, passage_id, callback=self.pos_tag)
             history = set()
             self.oracle = Oracle(passage) if isinstance(passage, core.Passage) else None
+            failed = False
             try:
                 self.parse_passage(history, train)  # This is where the actual parsing takes place
             except AssertionError as e:
@@ -113,25 +114,26 @@ class Parser(object):
                     raise
                 if Config().verbose:
                     print(e)
-                print("failed, ", end="")
+                print("failed")
+                failed = True
+            predicted_passage = passage
             if not train or Config().verify:
                 predicted_passage = self.state.create_passage(assert_proper=Config().verify)
-            else:
-                predicted_passage = passages
-            if self.oracle:  # passage is a Passage object
-                if Config().verify:
-                    self.verify_passage(passage, predicted_passage, train)
-                print("accuracy: %.3f (%d/%d)" %
-                      (self.correct_count/self.action_count, self.correct_count, self.action_count)
-                      if self.action_count else "No actions done", end=Config().line_end)
             duration = time.time() - started
-            words = len(passage.layer(layer0.LAYER_ID).all) if self.oracle else sum(map(len, passage))
-            print("time: %0.3fs (%d words/second)" % (duration, words / duration),
-                  end=Config().line_end + "\n", flush=True)
+            total_duration += duration
+            if not failed:
+                if self.oracle:  # passage is a Passage object, and we have an oracle to verify by
+                    if Config().verify:
+                        self.verify_passage(passage, predicted_passage, train)
+                    print("accuracy: %.3f (%d/%d)" %
+                          (self.correct_count/self.action_count, self.correct_count, self.action_count)
+                          if self.action_count else "No actions done", end=Config().line_end)
+                words = len(passage.layer(layer0.LAYER_ID).all) if self.oracle else sum(map(len, passage))
+                total_words += words
+                print("time: %0.3fs (%d words/second)" % (duration, words / duration),
+                      end=Config().line_end + "\n", flush=True)
             self.total_correct += self.correct_count
             self.total_actions += self.action_count
-            total_duration += duration
-            total_words += words
             num_passages += 1
             yield predicted_passage, passage, passage_id
 
@@ -198,7 +200,8 @@ class Parser(object):
                 self.correct_count += 1
             elif train:
                 best_true_action_id = max([true_action.id for true_action in true_actions],
-                                          key=self.scores.get)
+                                          key=self.scores.get) if len(true_actions) > 1 \
+                    else true_actions[0].id
                 self.model.update(features, predicted_action.id, best_true_action_id,
                                   Config().learning_rate)
                 action = random.choice(true_actions)

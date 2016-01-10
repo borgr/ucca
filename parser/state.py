@@ -279,8 +279,8 @@ class State(object):
                     elif edge.tag == EdgeTags.LinkArgument:
                         link_args.append(edge.child.node)
                 assert link_relation is not None, "No link relations: %s" % node
-                if len(link_args) < 2:
-                    print("Less than two link arguments for linkage %s" % node, file=sys.stderr)
+                # if len(link_args) < 2:
+                #     print("Less than two link arguments for linkage %s" % node, file=sys.stderr)
                 node.node = l1.add_linkage(link_relation, *link_args)
                 if node.node_id:  # We are in training and we have a gold passage
                     node.node.extra["remarks"] = node.node_id  # For reference
