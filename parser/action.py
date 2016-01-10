@@ -58,6 +58,9 @@ class Action(object):
     def __eq__(self, other):
         return self.id == other.id
 
+    def __hash__(self):
+        return hash(self.id)
+
     def __call__(self, *args, **kwargs):
         return Action(self.type, *args, **kwargs)
 
