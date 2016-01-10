@@ -105,7 +105,7 @@ class State(object):
             assert_possible_child(child)
             if parent is self.root:
                 assert child.text is None, "Root may not have terminal children, but is being added '%s'" % child
-                assert parent.outgoing_tags <= Constraints.TopLevel
+                assert action.tag in Constraints.TopLevel, "The root may not have %s edges" % action.tag
             if Config().multiple_edges:
                 edge = self.create_edge(action)
                 assert edge not in parent.outgoing, "Edge must not already exist: %s" % edge
