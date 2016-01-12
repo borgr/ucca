@@ -91,14 +91,17 @@ class Parser(object):
         :return: generator of triplets of (parsed passage, original passage, passage ID)
         """
         train = (mode == "train")
+        passage_word = "sentences" if Config().sentences else \
+                       "paragraphs" if Config().paragraphs else \
+                       "passages"
         assert train or mode in ("test", "dev"), "Invalid parse mode: %s" % mode
         self.total_actions = 0
         self.total_correct = 0
         total_duration = 0
-        total_words = 0
+        total_tokens = 0
         num_passages = 0
         for passage, passage_id in passages:
-            print("passage " + passage_id, end=Config().line_end, flush=True)
+            print("%s %s" % (passage_word, passage_id), end=Config().line_end, flush=True)
             started = time.time()
             self.action_count = 0
             self.correct_count = 0
@@ -114,7 +117,7 @@ class Parser(object):
                     raise
                 if Config().verbose:
                     print(e)
-                print("passage %s:\n%s" % (passage_id, e), file=Config().log_file, flush=True)
+                print("%s %s:\n%s" % (passage_word, passage_id, e), file=Config().log_file, flush=True)
                 print("failed")
                 failed = True
             predicted_passage = passage
@@ -129,9 +132,9 @@ class Parser(object):
                     print("accuracy: %.3f (%d/%d)" %
                           (self.correct_count/self.action_count, self.correct_count, self.action_count)
                           if self.action_count else "No actions done", end=Config().line_end)
-                words = len(passage.layer(layer0.LAYER_ID).all) if self.oracle else sum(map(len, passage))
-                total_words += words
-                print("time: %0.3fs (%d words/second)" % (duration, words / duration),
+                num_tokens = len(passage.layer(layer0.LAYER_ID).all) if self.oracle else sum(map(len, passage))
+                total_tokens += num_tokens
+                print("time: %0.3fs (%d tokens/second)" % (duration, num_tokens / duration),
                       end=Config().line_end + "\n", flush=True)
             self.total_correct += self.correct_count
             self.total_actions += self.action_count
@@ -139,14 +142,14 @@ class Parser(object):
             yield predicted_passage, passage, passage_id
 
         if num_passages > 1:
-            print("Parsed %d passages" % num_passages)
+            print("Parsed %d %ss" % (num_passages, passage_word))
             if self.oracle and self.total_actions:
                 print("Overall %s accuracy: %.3f (%d/%d)" %
                       (mode,
                        self.total_correct / self.total_actions, self.total_correct, self.total_actions))
-            print("Total time: %.3fs (average time/passage: %.3fs, average words/second: %d)" % (
-                total_duration, total_duration / num_passages, total_words / total_duration),
-                  flush=True)
+            print("Total time: %.3fs (average time/%s: %.3fs, average tokens/second: %d)" % (
+                total_duration, passage_word, total_duration / num_passages,
+                total_tokens / total_duration), flush=True)
 
     @staticmethod
     def read_passage(passage):
