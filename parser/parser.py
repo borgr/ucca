@@ -151,30 +151,6 @@ class Parser(object):
                 total_duration, passage_word, total_duration / num_passages,
                 total_tokens / total_duration), flush=True)
 
-    @staticmethod
-    def read_passage(passage):
-        """
-        Read a passage given in any format
-        :param passage: either a core.Passage, a file, or a list of list of strings (paragraphs, words)
-        :return: a core.Passage and its ID if given a Passage or file, or else the given list of lists
-        """
-        if isinstance(passage, core.Passage):
-            passage_id = passage.ID
-        elif os.path.exists(passage):  # a file
-            try:
-                passage = ioutil.file2passage(passage)  # XML or binary format
-                passage_id = passage.ID
-            except (IOError, ParseError):
-                passage_id = os.path.splitext(os.path.basename(passage))[0]
-                with open(passage) as text_file:  # simple text file
-                    lines = (line.strip() for line in text_file.readlines())
-                    passage = [[token for line in group for token in line.split()]
-                               for is_sep, group in groupby(lines, lambda x: not x)
-                               if not is_sep]
-        else:
-            raise IOError("File not found: %s" % passage)
-        return passage, passage_id
-
     def parse_passage(self, history=None, train=False):
         """
         Internal method to parse a single passage
@@ -230,8 +206,8 @@ class Parser(object):
         :param train: whether to print the oracle in case of an assertion error
         """
         h = hash(self.state)
-        assert h not in history, "Transition loop:\n" + self.state.str("\n") + \
-                                 "\n" + self.oracle.str("\n") if train else ""
+        assert h not in history, "\n".join(["Transition loop", self.state.str("\n")] +
+                                           [self.oracle.str("\n")] if train else [])
         history.add(h)
 
     def predict_action(self, features, true_actions=None):
@@ -247,12 +223,13 @@ class Parser(object):
             return best_action
         # Usually the best action is valid, so max is enough to choose it in O(n) time
         # Otherwise, sort all the other scores to choose the best valid one in O(n lg n)
-        scores_sorted = sorted(self.scores, key=self.scores.get)[-2::-1]  # Exclude max, already checked
-        actions = (self.select_action(i, true_actions) for i in scores_sorted)
+        sorted_ids = reversed(sorted(self.scores, key=self.scores.get))
+        actions = (self.select_action(i, true_actions) for i in sorted_ids)
         try:
             return next(action for action in actions if self.state.is_valid(action))
         except StopIteration as e:
-            raise AssertionError("No valid actions available") from e
+            raise AssertionError("No valid actions available\n"
+                                 "True actions: %s" % true_actions) from e
 
     @staticmethod
     def select_action(i, true_actions):
@@ -288,6 +265,30 @@ class Parser(object):
             print(" ".join("%s/%s" % (token, tag) for (token, tag) in zip(tokens, tags)))
         for node, tag in zip(state.nodes, tags):
             node.pos_tag = tag
+
+    @staticmethod
+    def read_passage(passage):
+        """
+        Read a passage given in any format
+        :param passage: either a core.Passage, a file, or a list of list of strings (paragraphs, words)
+        :return: a core.Passage and its ID if given a Passage or file, or else the given list of lists
+        """
+        if isinstance(passage, core.Passage):
+            passage_id = passage.ID
+        elif os.path.exists(passage):  # a file
+            try:
+                passage = ioutil.file2passage(passage)  # XML or binary format
+                passage_id = passage.ID
+            except (IOError, ParseError):
+                passage_id = os.path.splitext(os.path.basename(passage))[0]
+                with open(passage) as text_file:  # simple text file
+                    lines = (line.strip() for line in text_file.readlines())
+                    passage = [[token for line in group for token in line.split()]
+                               for is_sep, group in groupby(lines, lambda x: not x)
+                               if not is_sep]
+        else:
+            raise IOError("File not found: %s" % passage)
+        return passage, passage_id
 
 
 def read_passages(files):
