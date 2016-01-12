@@ -32,8 +32,9 @@ class Oracle(object):
             except AssertionError as e:
                 invalid.append((action, e))
         assert actions, "\n".join(["Oracle found no valid action",
-                                   state.str("\n"), self.str("\n")] +
-                                  ["%s: %s" % (action, e) for (action, e) in invalid])
+                                   state.str("\n"), self.str("\n"),
+                                   "Actions returned by the oracle:"] +
+                                  ["  %s: %s" % (action, e) for (action, e) in invalid])
         return actions
 
     def generate_actions(self, state):

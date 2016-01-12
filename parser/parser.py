@@ -17,7 +17,12 @@ from ucca import core, layer0, convert, ioutil, diffutil
 from ucca.evaluation import evaluate, print_aggregate, average_f1
 
 
+class ParserException(Exception):
+    pass
+
+
 class Parser(object):
+
     """
     Main class to implement transition-based UCCA parser
     """
@@ -112,8 +117,8 @@ class Parser(object):
             failed = False
             try:
                 self.parse_passage(history, train)  # This is where the actual parsing takes place
-            except AssertionError as e:
-                if mode in ("train", "dev"):
+            except ParserException as e:
+                if train:
                     raise
                 if Config().verbose:
                     print(e)
@@ -170,7 +175,7 @@ class Parser(object):
                     true_actions = self.oracle.get_actions(self.state)
                 except (AttributeError, AssertionError) as e:
                     if train:
-                        raise Exception("Error in oracle during training") from e
+                        raise ParserException("Error in oracle during training") from e
 
             features = self.feature_extractor.extract_features(self.state)
             predicted_action = self.predict_action(features, true_actions)
@@ -229,8 +234,8 @@ class Parser(object):
         try:
             return next(action for action in actions if self.state.is_valid(action))
         except StopIteration as e:
-            raise AssertionError("No valid actions available\n"
-                                 "True actions: %s" % true_actions) from e
+            raise ParserException("No valid actions available\n"
+                                  "True actions: %s" % true_actions) from e
 
     @staticmethod
     def select_action(i, true_actions):
