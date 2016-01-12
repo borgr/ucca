@@ -1,9 +1,10 @@
-import psycopg2
-import sys
 import re
 import sys
-from xml.etree.ElementTree import ElementTree, tostring, fromstring
 from collections import Counter
+from xml.etree.ElementTree import fromstring
+
+import psycopg2
+
 from ucca import convert
 from ucca.layer1 import EdgeTags as ET
 from ucca.layer1 import NodeTags as NT

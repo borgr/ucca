@@ -6,7 +6,6 @@ import sys
 import ucca.convert
 from ucca.ioutil import file2passage
 
-
 desc = """Parses an XML in UCCA standard format, and writes it as a linearized sequence.
 """
 

@@ -2,8 +2,8 @@
 import pickle
 from xml.etree.ElementTree import ElementTree, tostring
 
-from ucca.textutil import indent_xml
 from ucca.convert import from_standard, to_standard
+from ucca.textutil import indent_xml
 
 
 def file2passage(filename):

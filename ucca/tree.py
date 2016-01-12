@@ -1,7 +1,8 @@
+import os
 import pickle
 import xml.etree.ElementTree as ET
 from glob import glob
-import os
+
 import convert
 import layer0
 

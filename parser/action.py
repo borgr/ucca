@@ -1,8 +1,7 @@
 import re
 
-from ucca.layer1 import EdgeTags
-
 from config import Config
+from ucca.layer1 import EdgeTags
 
 
 class Action(object):

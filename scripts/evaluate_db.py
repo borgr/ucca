@@ -13,10 +13,9 @@ from ucca import convert
 # from collections import Counter
 
 from optparse import OptionParser
-from argparse import ArgumentParser
 import ucca_db
 from ucca.evaluation import evaluate
-from ucca.evaluation import flatten_centers
+
 
 ##############################################################################
 # Returns the command line parser.
