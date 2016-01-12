@@ -101,7 +101,7 @@ class Parser(object):
         total_tokens = 0
         num_passages = 0
         for passage, passage_id in passages:
-            print("%s %s" % (passage_word, passage_id), end=Config().line_end, flush=True)
+            print("%s %-7s" % (passage_word, passage_id), end=Config().line_end, flush=True)
             started = time.time()
             self.action_count = 0
             self.correct_count = 0
@@ -117,7 +117,8 @@ class Parser(object):
                     raise
                 if Config().verbose:
                     print(e)
-                print("%s %s:\n%s" % (passage_word, passage_id, e), file=Config().log_file, flush=True)
+                print("%s %-7s:\n%s" % (passage_word, passage_id, e),
+                      file=Config().log_file, flush=True)
                 print("failed")
                 failed = True
             predicted_passage = passage
