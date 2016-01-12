@@ -13,7 +13,13 @@ if __name__ == "__main__":
     for learning_rate in learning_rates:
         print("Running with learning rate of %.3f" % learning_rate)
         Config().learning_rate = learning_rate
-        score = parser.main()
+        score = None
+        while score is None:
+            # noinspection PyBroadException
+            try:
+                score = parser.main()
+            except Exception as e:
+                print(e)
         scores.append(score)
         best = np.argmax(scores)
         print("Best learning rate: %f (F1=%f)" % (learning_rates[best], scores[best]))
