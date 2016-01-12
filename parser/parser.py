@@ -91,9 +91,9 @@ class Parser(object):
         :return: generator of triplets of (parsed passage, original passage, passage ID)
         """
         train = (mode == "train")
-        passage_word = "sentences" if Config().sentences else \
-                       "paragraphs" if Config().paragraphs else \
-                       "passages"
+        passage_word = "sentence" if Config().sentences else \
+                       "paragraph" if Config().paragraphs else \
+                       "passage"
         assert train or mode in ("test", "dev"), "Invalid parse mode: %s" % mode
         self.total_actions = 0
         self.total_correct = 0

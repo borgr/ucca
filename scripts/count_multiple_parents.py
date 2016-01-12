@@ -35,7 +35,7 @@ def main():
     parser.add_argument('-p', '--plot', help="output file for bar plot image file")
     args = parser.parse_args()
 
-    histogram = Counter();
+    histogram = Counter()
     for filename in args.filenames:
         sys.stderr.write("Reading passage '%s'...\n" % filename)
         passage = file2passage(filename)
