@@ -1054,7 +1054,8 @@ def split_passage(passage, ends, remarks=False):
             nodes.add(terminal)
         while level:
             nodes.update(level)
-            level = set(p for n in level for p in n.parents if p not in nodes)
+            level = set(edge.parent for node in level for edge in node.incoming
+                        if not edge.attrib.get("remote") and edge.parent not in nodes)
 
         layer1.Layer1(root=other, attrib=passage.layer(layer1.LAYER_ID).attrib.copy())
         _copy_l1_nodes(passage, other, id_to_other, nodes, remarks=remarks)
