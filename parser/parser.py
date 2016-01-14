@@ -120,10 +120,7 @@ class Parser(object):
             except ParserException as e:
                 if train:
                     raise
-                if Config().verbose:
-                    print(e)
-                print("%s %-7s:\n%s" % (passage_word, passage_id, e),
-                      file=Config().log_file, flush=True)
+                Config().log("%s %-7s:\n%s" % (passage_word, passage_id, e))
                 print("failed")
                 failed = True
             predicted_passage = passage

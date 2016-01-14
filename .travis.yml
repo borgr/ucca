@@ -16,12 +16,12 @@ before_script:
 # command to run tests
 script:
   - python -m unittest discover -v
-  - python parser/parser.py -I 10 -t doc/toy.xml -d doc/toy.xml -m model_toy && cat parser.log
-  - python parser/parser.py doc/toy.xml -m model_toy && cat parser.log
-  - python parser/parser.py -I 10 -t doc/toy.xml -d doc/toy.xml -sm model_toy_sentences && cat parser.log
-  - python parser/parser.py doc/toy.xml -sm model_toy_sentences && cat parser.log
-  - python parser/parser.py -I 10 -t doc/toy.xml -d doc/toy.xml -am model_toy_paragraphs && cat parser.log
-  - python parser/parser.py doc/toy.xml -sm model_toy_paragraphs && cat parser.log
+  - python parser/parser.py -I 10 -t doc/toy.xml -d doc/toy.xml -vm model_toy
+  - python parser/parser.py doc/toy.xml -vm model_toy
+  - python parser/parser.py -I 10 -t doc/toy.xml -d doc/toy.xml -svm model_toy_sentences
+  - python parser/parser.py doc/toy.xml -svm model_toy_sentences
+  - python parser/parser.py -I 10 -t doc/toy.xml -d doc/toy.xml -avm model_toy_paragraphs
+  - python parser/parser.py doc/toy.xml -svm model_toy_paragraphs
 # Uncomment this to train on the full training set (takes ~30 minutes):
 #  - python parser/parser.py -t pickle/train -d pickle/dev -bm model
 # Uncomment this to test on the full test set:

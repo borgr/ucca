@@ -55,7 +55,7 @@ class Config(object, metaclass=Singleton):
 
         self.verbose = self.args.verbose
         self.line_end = "\n" if self.verbose else " "  # show all in one line unless verbose
-        self.log_file = None if self.args.log is None else open(self.args.log, "w")
+        self._log_file = None
 
         self.sentences = self.args.sentences
         self.paragraphs = self.args.paragraphs
@@ -73,9 +73,16 @@ class Config(object, metaclass=Singleton):
         self.max_nodes_ratio = self.args.maxnodes
         self.multiple_edges = self.args.multiedge
 
+    def log(self, message):
+        if self._log_file is None:
+            self._log_file = open(self.args.log, "w")
+        print(message, file=self._log_file, flush=True)
+        if self.verbose:
+            print(message)
+
     def close(self):
-        if self.log_file is not None:
-            self.log_file.close()
+        if self._log_file is not None:
+            self._log_file.close()
 
     def __str__(self):
         return " ".join("--%s=%s" % item for item in vars(self.args).items())
