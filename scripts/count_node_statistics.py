@@ -9,9 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate.fitpack2 import UnivariateSpline
 
-import layer0
-import layer1
-from layer1 import NodeTags
+from ucca import layer0, layer1
+from ucca.layer1 import NodeTags
 from ucca.ioutil import file2passage
 from ucca.textutil import break2sentences
 
