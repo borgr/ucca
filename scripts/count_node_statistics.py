@@ -11,6 +11,7 @@ from scipy.interpolate.fitpack2 import UnivariateSpline
 
 import layer0
 import layer1
+from layer1 import NodeTags
 from ucca.ioutil import file2passage
 from ucca.textutil import break2sentences
 
@@ -20,35 +21,44 @@ desc = """Prints statistics on UCCA passages
 
 def main():
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('-d', '--directory', help="directory containing XML files to process")
-    parser.add_argument('-o', '--outfile', default="data/stats.txt", help="output file for data")
-    parser.add_argument('-i', '--infile', default="data/stats.txt", help="input file for data")
+    parser.add_argument("-f", "--filenames", nargs="+", help="files to process")
+    parser.add_argument("-o", "--outfile", default="data/stats.txt", help="output file for data")
+    parser.add_argument("-i", "--infile", default="data/stats.txt", help="input file for data")
     args = parser.parse_args()
 
-    if args.directory:
-        if not os.path.isdir(args.directory):
-            raise Exception("Not a directory: " + args.directory)
+    if args.filenames:
         ids = []
         terminal_counts = []
         non_terminal_counts = []
         edge_counts = []
         paragraph_counts = []
         sentence_counts = []
-        for filename in glob.glob(args.directory + "/*.xml"):
-            sys.stderr.write("Reading passage '%s'...\n" % filename)
-            passage = file2passage(filename)
-            ids.append(int(passage.ID))
-            terminals = passage.layer(layer0.LAYER_ID).all
-            terminal_counts.append(len(terminals))
-            non_terminals = passage.layer(layer1.LAYER_ID).all
-            non_terminal_counts.append(len(non_terminals))
-            edges = {edge for node in non_terminals for edge in node}
-            edge_counts.append(len(edges))
-            paragraphs = {terminal.paragraph for terminal in terminals}
-            paragraph_counts.append(len(paragraphs))
-            sentence_counts.append(len(break2sentences(passage)))
+        discontiguous_counts = []
+        multiple_parents_counts = []
+        for pattern in args.filenames:
+            for filename in glob.glob(pattern):
+                #  sys.stderr.write("Reading passage '%s'...\n" % filename)
+                passage = file2passage(filename)
+                ids.append(int(passage.ID))
+                terminals = passage.layer(layer0.LAYER_ID).all
+                terminal_counts.append(len(terminals))
+                non_terminals = passage.layer(layer1.LAYER_ID).all
+                non_terminal_counts.append(len(non_terminals))
+                edges = {edge for node in non_terminals for edge in node}
+                edge_counts.append(len(edges))
+                paragraphs = {terminal.paragraph for terminal in terminals}
+                paragraph_counts.append(len(paragraphs))
+                sentence_counts.append(len(break2sentences(passage)))
+                discontiguous = [node for node in non_terminals if
+                                 node.tag == NodeTags.Foundational and node.discontiguous]
+                discontiguous_counts.append(len(discontiguous))
+                # print(passage.ID + "\t" + "\t".join(node.ID for node in discontiguous))
+                print(passage.ID + "\t" + "\t".join(str(node) for node in discontiguous))
+                multiple_parents = [node for node in non_terminals if len(node.incoming) > 1]
+                multiple_parents_counts.append(len(multiple_parents))
         data = np.array((ids, terminal_counts, non_terminal_counts, edge_counts,
-                         paragraph_counts, sentence_counts), dtype=int).T
+                         paragraph_counts, sentence_counts,
+                         discontiguous_counts, multiple_parents_counts), dtype=int).T
         if args.outfile:
             np.savetxt(args.outfile, data[data[:, 0].argsort()], fmt="%i")
     elif args.infile:
