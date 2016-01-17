@@ -120,7 +120,7 @@ class Parser(object):
             except ParserException as e:
                 if train:
                     raise
-                Config().log("%s %-7s:\n%s" % (passage_word, passage_id, e))
+                Config().log("%s %s: %s" % (passage_word, passage_id, e))
                 print("failed")
                 failed = True
             predicted_passage = passage
@@ -231,8 +231,9 @@ class Parser(object):
         try:
             return next(action for action in actions if self.state.is_valid(action))
         except StopIteration as e:
-            raise ParserException("No valid actions available\n"
-                                  "True actions: %s" % true_actions) from e
+            raise ParserException("No valid actions available\n" +
+                                  ("True actions: %s" % true_actions if true_actions
+                                   else self.oracle.log)) from e
 
     @staticmethod
     def select_action(i, true_actions):

@@ -15,6 +15,7 @@ class Oracle(object):
         self.edges_remaining = {edge for node in passage.nodes.values() for edge in node}
         self.passage = passage
         self.edge_found = False
+        self.log = None
 
     def get_actions(self, state):
         """
@@ -31,11 +32,15 @@ class Oracle(object):
                 actions.append(action)
             except AssertionError as e:
                 invalid.append((action, e))
-        assert actions, "\n".join(["Oracle found no valid action",
-                                   state.str("\n"), self.str("\n"),
-                                   "Actions returned by the oracle:"] +
-                                  ["  %s: %s" % (action, e) for (action, e) in invalid])
+        assert actions, self.generate_log(invalid, state)
         return actions
+
+    def generate_log(self, invalid, state):
+        self.log = "\n".join(["Oracle found no valid action",
+                              state.str("\n"), self.str("\n"),
+                              "Actions returned by the oracle:"] +
+                             ["  %s: %s" % (action, e) for (action, e) in invalid])
+        return self.log
 
     def generate_actions(self, state):
         """
