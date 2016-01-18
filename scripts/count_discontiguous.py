@@ -4,8 +4,8 @@ import argparse
 import glob
 import sys
 
-from layer1 import NodeTags
 from ucca import layer1
+from ucca.layer1 import NodeTags
 from ucca.ioutil import file2passage
 
 desc = """Parses XML files in UCCA standard format, and count the number of discontiguous units.
@@ -34,6 +34,8 @@ def main():
             all_nodes += len(passage.nodes)
             layer0_nodes += len(passage.layer("0").all)
             for node in passage.layer("1").all:
+                if node.ID == "1.1":
+                    continue
                 layer1_nodes += 1
                 if isinstance(node, layer1.FoundationalNode):
                     foundational_nodes += 1
