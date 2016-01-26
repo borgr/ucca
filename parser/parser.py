@@ -55,6 +55,7 @@ class Parser(object):
 
         best_score = 0
         best_model = None
+        save_model = True
         print("Training %d iterations" % iterations)
         for iteration in range(1, iterations + 1):
             print("Iteration %d: " % iteration)
@@ -70,15 +71,19 @@ class Parser(object):
                                     self.parse(dev, mode="dev")])
                 score = average_f1(scores)
                 print("Average F1 score on dev: %.3f" % score)
-
-                if score > best_score:
+                if score >= best_score:
                     print("Better than previous best score (%.3f)" % best_score)
                     best_score = score
-                    best_model = self.model.average()
-                    if self.model_file is not None:  # Save trained model
-                        best_model.save(self.model_file)
+                    save_model = True
                 else:
                     print("Not better than previous best score (%.3f)" % best_score)
+                    save_model = False
+
+            if save_model:
+                best_model = self.model.average()
+                if self.model_file is not None:
+                    best_model.save(self.model_file)
+
             print()
         print("Trained %d iterations" % iterations)
 
