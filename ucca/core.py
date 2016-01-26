@@ -289,7 +289,8 @@ class Edge:
         return self.tag == other.tag and \
                self._attrib.equals(other._attrib) and \
                (not recursive or
-                self.child.equals(other.child, ordered=ordered))
+                self.child.equals(other.child,
+                                  ordered=ordered, ignore_node=ignore_node))
 
     def __repr__(self):
         return self.ID

@@ -71,7 +71,7 @@ class Terminal(core.Node):
     def punct(self):
         return self.tag == NodeTags.Punct
 
-    def equals(self, other, *, ordered=False):
+    def equals(self, other, *, ordered=False, **kwargs):
         """Equals if the Terminals are of the same Layer, tag, position & text.
 
         Args:
