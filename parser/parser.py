@@ -13,7 +13,7 @@ from config import Config
 from features import FeatureExtractor
 from oracle import Oracle
 from state import State
-from ucca import core, layer0, convert, ioutil, diffutil
+from ucca import core, layer0, layer1, convert, ioutil, diffutil
 from ucca.evaluation import evaluate, print_aggregate, average_f1
 
 
@@ -253,9 +253,10 @@ class Parser(object):
                           Depends on predicted_passage having the original node IDs annotated
                           in the "remarks" field for each node.
         """
-        assert passage.equals(predicted_passage), "Failed to produce true passage" + \
-                                                  (diffutil.diff_passages(
-                                                          passage, predicted_passage) if show_diff else "")
+        assert passage.equals(predicted_passage, ignore_node=ignore_node),\
+            "Failed to produce true passage" + \
+            (diffutil.diff_passages(
+                    passage, predicted_passage) if show_diff else "")
 
     @staticmethod
     def pos_tag(state):
@@ -293,6 +294,12 @@ class Parser(object):
         else:
             raise IOError("File not found: %s" % passage)
         return passage, passage_id
+
+if Config().no_linkage:
+    def ignore_node(node):
+        return node.tag == layer1.NodeTags.Linkage
+else:
+    ignore_node = None
 
 
 def read_passages(files):

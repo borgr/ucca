@@ -82,7 +82,9 @@ class Action(object):
                                 Actions.LeftEdge, Actions.RightEdge,
                                 Actions.LeftRemote, Actions.RightRemote)
                                for name, tag in EdgeTags.__dict__.items()
-                               if isinstance(tag, str) and not name.startswith('__')] + \
+                               if isinstance(tag, str) and not name.startswith('__') and
+                               (not Config().no_linkage or tag not in (
+                                   EdgeTags.LinkRelation, EdgeTags.LinkArgument))] + \
                               [Actions.Reduce, Actions.Shift, Actions.Finish]
             if Config().compound_swap:
                 cls.all_actions.extend(Actions.Swap(i) for i in range(1, Config().max_swap + 1))
