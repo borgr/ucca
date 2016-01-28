@@ -6,8 +6,9 @@ import parser
 from config import Config
 
 if __name__ == "__main__":
-    out_file = sys.argv.pop(0)
-    learning_rates = list(set(np.round(0.001 + np.random.exponential(0.8, 50), 3)))
+    out_file = sys.argv.pop(1)
+    n = int(sys.argv.pop(1))
+    learning_rates = list(set(np.round(0.001 + np.random.exponential(0.8, n), 3)))
     print("All learning rates to try: " + ",".join(
             "%.3f" % learning_rate for learning_rate in sorted(learning_rates)))
     scores = []

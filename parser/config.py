@@ -49,7 +49,7 @@ class Config(object, metaclass=Singleton):
                                help="maximum ratio between non-terminal to terminal nodes")
         argparser.add_argument("-M", "--multiedge", action="store_true", default=False,
                                help="allow multiple edges between the same nodes (with different tags)")
-        argparser.add_argument("--nolinkage", action="store_true", default=False,
+        argparser.add_argument("-n", "--nolinkage", action="store_true", default=False,
                                help="ignore linkage nodes and edges during both train and test")
         self.args = argparser.parse_args()
 
