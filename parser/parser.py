@@ -189,8 +189,10 @@ class Parser(object):
                 best_true_action_id = max([true_action.id for true_action in true_actions],
                                           key=self.scores.get) if len(true_actions) > 1 \
                     else true_actions[0].id
-                self.model.update(features, predicted_action.id, best_true_action_id,
-                                  Config().learning_rate)
+                rate = Config().learning_rate
+                if Action.is_swap_id(best_true_action_id):
+                    rate *= Config().importance
+                self.model.update(features, predicted_action.id, best_true_action_id, rate)
                 action = random.choice(true_actions)
             self.action_count += 1
             self.state.transition(action)

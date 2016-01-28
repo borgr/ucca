@@ -86,10 +86,12 @@ class Action(object):
                                (not Config().no_linkage or tag not in (
                                    EdgeTags.LinkRelation, EdgeTags.LinkArgument))] + \
                               [Actions.Reduce, Actions.Shift, Actions.Finish]
+            cls.swap_start = len(cls.all_actions)
             if Config().compound_swap:
                 cls.all_actions.extend(Actions.Swap(i) for i in range(1, Config().max_swap + 1))
             else:
                 cls.all_actions.append(Actions.Swap)
+            cls.swap_end = len(cls.all_actions)
             cls.all_action_ids = {(action.type_id, action.tag): i
                                   for i, action in enumerate(cls.all_actions)}
         return cls.all_actions
@@ -97,6 +99,11 @@ class Action(object):
     @classmethod
     def by_id(cls, i):
         return cls.get_all_actions()[i]
+
+    @classmethod
+    def is_swap_id(cls, i):
+        cls.get_all_actions()
+        return cls.swap_start <= i < cls.swap_end
 
 
 class Actions:
