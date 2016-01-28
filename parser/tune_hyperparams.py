@@ -25,5 +25,5 @@ if __name__ == "__main__":
         scores.append(score)
         best = np.argmax(scores)
         print("Best learning rate: %f (F1=%f)" % (learning_rates[best], scores[best]))
-        with open(out_file, mode="a"):
-            print([learning_rate, score], sep=",", file=out_file)
+        with open(out_file, mode="a") as f:
+            print([learning_rate, score], sep=",", file=f)
