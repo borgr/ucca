@@ -19,6 +19,8 @@ class Config(object, metaclass=Singleton):
                                help="passage files/directories to train on")
         argparser.add_argument("-d", "--dev", nargs="+", default=[],
                                help="passage files/directories to tune on")
+        argparser.add_argument("-f", "--folds", type=int, choices=range(2, 11), default=None,
+                               help="number of folds for k-fold cross validation")
         argparser.add_argument("-m", "--model", default=None, help="model file to load/save")
         argparser.add_argument("-o", "--outdir", default=".", help="output directory")
         argparser.add_argument("-p", "--prefix", default="ucca_passage", help="output filename prefix")
@@ -53,7 +55,8 @@ class Config(object, metaclass=Singleton):
                                help="ignore linkage nodes and edges during both train and test")
         self.args = argparser.parse_args()
 
-        self.iterations = self.args.iterations
+        assert not (self.args.train or self.args.dev) or self.args.folds is None,\
+            "--train and --dev are incompatible with --folds"
 
         self.verbose = self.args.verbose
         self.line_end = "\n" if self.verbose else " "  # show all in one line unless verbose
@@ -62,16 +65,16 @@ class Config(object, metaclass=Singleton):
         self.sentences = self.args.sentences
         self.paragraphs = self.args.paragraphs
         assert not (self.sentences and self.paragraphs),\
-            "At most one of --sentences and --paragraphs may be specified"
+            "--sentences and --paragraphs are incompatible"
         self.split = self.sentences or self.paragraphs
+
+        self.iterations = self.args.iterations
         self.learning_rate = self.args.learningrate
         self.min_update = self.args.minupdate
         self.check_loops = self.args.checkloops
         self.verify = self.args.verify
-
         self.compound_swap = self.args.compoundswap
         self.max_swap = self.args.maxswap
-
         self.max_nodes_ratio = self.args.maxnodes
         self.multiple_edges = self.args.multiedge
         self.no_linkage = self.args.nolinkage

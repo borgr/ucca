@@ -56,9 +56,8 @@ class Parser(object):
         best_score = 0
         best_model = None
         save_model = True
-        print("Training %d iterations" % iterations)
-        for iteration in range(1, iterations + 1):
-            print("Iteration %d: " % iteration)
+        for iteration in range(iterations):
+            print("Training iteration %d of %d: " % (iteration + 1, iterations))
             passages = [(passage, passage_id) for _, passage, passage_id in
                         self.parse(passages, mode="train")]
             shuffle(passages)
@@ -321,8 +320,9 @@ def read_passages(files):
 
 def read_files_and_dirs(files):
     """
-    :param files: a list of files and/or directories to look in
-    :return: passages from all files given, plus any files directly under any directory given
+    :param files: iterable of files and/or directories to look in
+    :return: generator of passages from all files given,
+             plus any files directly under any directory given
     """
     files += [os.path.join(d, f) for d in files if os.path.isdir(d) for f in os.listdir(d)]
     files = [f for f in files if not os.path.isdir(f)]
@@ -337,32 +337,57 @@ def write_passage(passage, outdir, prefix, binary, verbose):
     ioutil.passage2file(passage, outfile, binary=binary)
 
 
-def main():
-    args = Config().args
-    print("Running parser with %s" % Config())
+def train_test(train_passages, dev_passages, test_passages, args):
+    score = None
     parser = Parser(args.model)
-    train_passages = read_files_and_dirs(args.train)
-    dev_passages = read_files_and_dirs(args.dev)
     parser.train(train_passages, dev=dev_passages, iterations=args.iterations)
-    if args.passages:
+    if test_passages:
         if args.train:
             print("Evaluating on test passages")
         scores = []
-        test_passages = read_files_and_dirs(args.passages)
         for guessed_passage, ref_passage, _ in parser.parse(test_passages):
             if isinstance(ref_passage, core.Passage):
                 scores.append(evaluate(guessed_passage, ref_passage,
                                        verbose=args.verbose and guessed_passage is not None))
             if guessed_passage is not None:
-                write_passage(guessed_passage, args.outdir, args.prefix, args.binary, args.verbose)
+                write_passage(guessed_passage,
+                              args.outdir, args.prefix, args.binary, args.verbose)
         if scores:
-            f1 = average_f1(scores)
+            score = average_f1(scores)
             print()
-            print("Average F1 score on test: %.3f" % f1)
+            print("Average F1 score on test: %.3f" % score)
             print("Aggregated scores:")
             print()
             print_aggregate(scores)
-            return f1
+    return score
+
+
+def main():
+    args = Config().args
+    print("Running parser with %s" % Config())
+    if args.folds is not None:
+        k = args.folds
+        score = []
+        all_passages = list(read_files_and_dirs(args.passages))
+        assert len(all_passages) >= k,\
+            "%d folds are not possible with only %d passages" % (k, len(all_passages))
+        shuffle(all_passages)
+        folds = [all_passages[i::k] for i in range(k)]
+        for i in range(k):
+            print("Fold %d of %d:" % (i + 1, k))
+            dev_passages = folds[i]
+            test_passages = folds[(i+1) % k]
+            train_passages = [passage for fold in folds
+                              if fold is not dev_passages and fold is not test_passages
+                              for passage in fold]
+            score.append(train_test(train_passages, dev_passages, test_passages, args))
+        print("Scores for all folds: " + ", ".join("%.3f" % s for s in score))
+        print("Average: " + sum(score) / len(score))
+    else:  # Simple train/dev/test by given arguments
+        train_passages, dev_passages, test_passages = [read_files_and_dirs(arg) for arg in
+                                                       (args.train, args.dev, args.passages)]
+        score = train_test(train_passages, dev_passages, test_passages, args)
+    return score
 
 
 if __name__ == "__main__":
