@@ -352,9 +352,9 @@ def aggregate(results):
     """
     Aggregate Results object instances for each evaluation type
     :param results: iterable of dictionaries of evaluation type to Results objects
-    :return: dictionary with a single Results object for each evaluation type
+    :return: list of (evaluation type, aggregated Results object) pairs
     """
-    return {t: Results.aggregate(r[t] for r in results) for t in EVAL_TYPES}
+    return [(t, Results.aggregate(r[t] for r in results)) for t in EVAL_TYPES]
 
 
 def print_aggregate(results):
@@ -362,6 +362,7 @@ def print_aggregate(results):
     Print the aggregated Results objects from several evaluation types
     :param results: iterable of dictionaries of evaluation types to Results objects
     """
-    for t, r in aggregate(results).items():
-        print("\nEvaluation type: (" + t + ")")
+    for t, r in aggregate(results):
+        print("Evaluation type: (" + t + ")")
         r.print()
+
