@@ -268,7 +268,8 @@ class Edge:
     def ID(self):
         return Edge.ID_FORMAT.format(self._parent.ID, self._child.ID)
 
-    def equals(self, other, *, recursive=True, ordered=False, ignore_node=None):
+    def equals(self, other, *, recursive=True, ordered=False,
+               ignore_node=None, ignore_edge=None):
         """Returns whether self and other are Edge-equals.
 
         Edge-equality is determined by having the same tag and attributes.
@@ -280,6 +281,7 @@ class Edge:
         :param ordered: if recursive, whether the children are Node-equivalent
             w.r.t order (see Node.equals())
         :param ignore_node: function that returns whether to ignore a given node
+        :param ignore_edge: function that returns whether to ignore a given edge
 
 
         Returns:
@@ -290,7 +292,8 @@ class Edge:
                self._attrib.equals(other._attrib) and \
                (not recursive or
                 self.child.equals(other.child,
-                                  ordered=ordered, ignore_node=ignore_node))
+                                  ordered=ordered,
+                                  ignore_node=ignore_node, ignore_edge=ignore_edge))
 
     def __repr__(self):
         return self.ID
@@ -492,7 +495,8 @@ class Node:
         self.layer._remove_node(self)
         self._root._remove_node(self)
 
-    def equals(self, other, *, recursive=True, ordered=False, ignore_node=None):
+    def equals(self, other, *, recursive=True, ordered=False,
+               ignore_node=None, ignore_edge=None):
         """Returns whether the self Node-equals other.
 
         Node-equality is basically determined by self and other having the same
@@ -507,6 +511,7 @@ class Node:
         :param recursive: whether comparison is recursive, defaults to True.
         :param ordered: whether comparison should include strict ordering
         :param ignore_node: function that returns whether to ignore a given node
+        :param ignore_edge: function that returns whether to ignore a given edge
 
         Returns:
             True iff the Nodes are equal in the terms given.
@@ -517,13 +522,17 @@ class Node:
         if not recursive:
             return True
         edges, other_edges = [[edge for edge in node
-                               if ignore_node is None or
-                               not ignore_node(edge.child)]
+                               if (ignore_node is None or
+                                   not ignore_node(edge.child)) and (
+                                   ignore_edge is None or
+                                   not ignore_edge(edge))]
                               for node in (self, other)]
         if len(edges) != len(other_edges):
             return False  # not necessary, but gives better performance
         if ordered:
-            return all(e1.equals(e2, ordered=True) for e1, e2 in zip(edges, other_edges))
+            return all(e1.equals(e2, ordered=True,
+                                 ignore_node=ignore_node, ignore_edge=ignore_edge)
+                       for e1, e2 in zip(edges, other_edges))
         # For unordered equality, I try to find & remove an equivalent
         # Edge + Node couple from other's Edges until exhausted.
         # Because both Edge-equality and Node-equality are equivalence
@@ -532,7 +541,8 @@ class Node:
         try:
             for e1 in edges:
                 other_edges.remove(next(e2 for e2 in other_edges
-                                        if e1.equals(e2, ignore_node=ignore_node)))
+                                        if e1.equals(e2, ignore_node=ignore_node,
+                                                     ignore_edge=ignore_edge)))
         except StopIteration:
             return False
         return not other_edges
@@ -675,7 +685,7 @@ class Layer:
         self._all.sort(key=value)
         self._heads.sort(key=value)
 
-    def equals(self, other, *, ordered=False, ignore_node=None):
+    def equals(self, other, *, ordered=False, ignore_node=None, ignore_edge=None):
         """Returns whether two Layer objects are equal.
 
         Layers are considered Layer-equal if their attribute dictionaries are
@@ -687,6 +697,7 @@ class Layer:
         :param other: the Layer object to compare to
         :param ordered: whether strict-order equality is used, defaults to False
         :param ignore_node: function that returns whether to ignore a given node
+        :param ignore_edge: function that returns whether to ignore a given edge
 
         Returns:
             True iff self and other are Layer-equal.
@@ -701,13 +712,16 @@ class Layer:
         if len(heads) != len(other_heads):
             return False  # can be removed, here for performance gain
         if ordered:
-            return all(x1.equals(x2, ordered=True, ignore_node=ignore_node)
+            return all(x1.equals(x2, ordered=True,
+                                 ignore_node=ignore_node, ignore_edge=ignore_edge)
                        for x1, x2 in zip(heads, other_heads))
         # I can just find the first equal head in unordered search, as
         # Node-equality is an equivalence class (see their for details).
         try:
             for h1 in heads:
-                other_heads.remove(next(h2 for h2 in other_heads if h1.equals(h2)))
+                other_heads.remove(next(h2 for h2 in other_heads
+                                        if h1.equals(h2, ignore_node=ignore_node,
+                                                     ignore_edge=ignore_edge)))
         except StopIteration:
             return False
         return not other_heads
@@ -850,7 +864,7 @@ class Passage:
         """
         return self._layers[ID]
 
-    def equals(self, other, *, ordered=False, ignore_node=None):
+    def equals(self, other, *, ordered=False, ignore_node=None, ignore_edge=None):
         """Returns whether two passages are equivalent.
 
         Passage-equivalence is determined by having the same attributes and
@@ -859,6 +873,7 @@ class Passage:
         :param other: the Passage object to compare to
         :param ordered: is Layer-equivalency should be ordered (see there)
         :param ignore_node: function that returns whether to ignore a given node
+        :param ignore_edge: function that returns whether to ignore a given edge
 
         Returns:
             True iff self is Passage-equivalent to other.
@@ -871,17 +886,19 @@ class Passage:
         try:
             for lid, l1 in self._layers.items():
                 l2 = other.layer(lid)
-                if not l1.equals(l2, ordered=ordered, ignore_node=ignore_node):
+                if not l1.equals(l2, ordered=ordered,
+                                 ignore_node=ignore_node, ignore_edge=ignore_edge):
                     return False
         except KeyError:  # no layer with same ID found
             return False
         return True
 
-    def missing_nodes(self, other, ignore_node=None):
+    def missing_nodes(self, other, ignore_node=None, ignore_edge=None):
         """Returns nodes present in this passage but missing in the other.
 
         :param other: the Passage object to compare to
         :param ignore_node: function that returns whether to ignore a given node
+        :param ignore_edge: function that returns whether to ignore a given edge
 
         Returns:
             List of nodes present in this passage but missing in the other.
@@ -892,7 +909,9 @@ class Passage:
                                not ignore_node(node)]
                               for passage in (self, other)]
         return sorted([n1 for n1 in nodes
-                       if not any(n1.equals(n2) for n2 in other_nodes)],
+                       if not any(n1.equals(n2, ignore_node=ignore_node,
+                                            ignore_edge=ignore_edge)
+                                  for n2 in other_nodes)],
                       key=id_orderkey)
 
     def copy(self, layers):

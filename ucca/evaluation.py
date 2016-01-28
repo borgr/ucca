@@ -181,10 +181,10 @@ def create_passage_yields(p, remote_terminals=False):
     l1 = p.layer("1")
     edges = []
     for node in l1.all:
-        edges.extend([e for e in node if e.tag not in (EdgeTags.Punctuation,
-                                                       EdgeTags.LinkArgument,
-                                                       EdgeTags.LinkRelation,
-                                                       EdgeTags.Terminal)])
+        edges.extend(e for e in node if e.tag not in (EdgeTags.Punctuation,
+                                                      EdgeTags.LinkArgument,
+                                                      EdgeTags.LinkRelation,
+                                                      EdgeTags.Terminal))
    
     table_reg, table_remote = dict(), dict()
     for e in edges:

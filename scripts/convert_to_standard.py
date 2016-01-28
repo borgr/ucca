@@ -1,5 +1,7 @@
 #!/usr/bin/python3
+
 import argparse
+import glob
 import os
 import re
 import sys
@@ -14,7 +16,7 @@ Each passage is written to the file:
 """
 
 
-def convert_file(filename, passage_id, converter=convert.from_conll):
+def convert_file(filename, passage_id, converter):
     """Opens a text file and returns its parsed Passage objects after conversion
     :param filename: input file
     :param passage_id: required for created passages (not specified in file)
@@ -38,18 +40,24 @@ def main():
                         help="write in pickle binary format (.pickle)")
     args = parser.parse_args()
 
-    for filename in args.filenames:
-        try:
-            passage_id = re.search(r"\d+", os.path.basename(filename)).group(0)
-        except AttributeError:
-            sys.stderr.write("Error: cannot find passage ID in '%s'\n" % filename)
-            continue
-        passage = convert_file(filename, passage_id)
+    if args.format == "conll":
+        converter = convert.from_conll
+    elif args.format == "sdp":
+        converter = convert.from_sdp
 
-        outfile = "%s/%s%s.%s" % (args.outdir, args.prefix, passage.ID,
-                                  "pickle" if args.binary else "xml")
-        sys.stderr.write("Writing passage '%s'...\n" % outfile)
-        passage2file(passage, outfile, args.binary)
+    for pattern in args.filenames:
+        for filename in glob.glob(pattern):
+            try:
+                passage_id = re.search(r"\d+", os.path.basename(filename)).group(0)
+            except AttributeError:
+                sys.stderr.write("Error: cannot find passage ID in '%s'\n" % filename)
+                continue
+            passage = convert_file(filename, passage_id, converter)
+
+            outfile = "%s/%s%s.%s" % (args.outdir, args.prefix, passage.ID,
+                                      "pickle" if args.binary else "xml")
+            sys.stderr.write("Writing '%s'...\n" % outfile)
+            passage2file(passage, outfile, args.binary)
 
     sys.exit(0)
 

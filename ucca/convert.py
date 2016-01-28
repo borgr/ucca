@@ -5,10 +5,10 @@ forms, to/from the :class:core.Passage form, acts as a pivot for all
 conversions.
 
 The possible other formats are:
-    site XML form
-    standard XML form
-    CoNLL-X form
-
+    site XML
+    standard XML
+    conll (CoNLL-X dependency parsing shared task)
+    sdp (SemEval 2015 semantic dependency parsing shared task)
 """
 
 import operator
@@ -31,43 +31,13 @@ class SiteXMLUnknownElement(core.UCCAError):
 
 
 class SiteCfg:
-    """Contains static configuration for conversion to/from the site XML.
-
-    Attributes:
-        Tags:
-            XML Elements' tags in the site XML format of different annotation
-            components - FNodes (Unit), Terminals, remote and implicit Units
-            and linkages.
-
-        Paths:
-            Paths (from the XML root) to different parts of the annotation -
-            the main units part, the discontiguous units, the paragraph
-            elements and the annotation units.
-
-        Types:
-            Possible types for the Type attribute, which is roughly equivalent
-            to Edge/Node tag. Only specially-handled types are here, which is
-            the punctuation type.
-
-        Attr:
-            Attribute names in the XML elements (not all exist in all elements)
-             - passage and site ID, discontiguous unit ID, UCCA tag, uncertain
-             flag, user remarks and linkage arguments. NodeID is special
-             because we set it for every unit that was already converted, and
-             it's not present in the original XML.
-
-        TBD: XML tag used for wrapping words (non-punctuation) and unit groups
-
-        TRUE, FALSE: values for True/False in the site XML (strings)
-
-        SchemeVersion: version of site XML scheme which self adheres to
-
-        TagConversion: mapping of site XML tag attribute to layer1 edge tags.
-
-        EdgeConversion: mapping of layer1.EdgeTags to site XML tag attributes.
+    """Contains static configuration for conversion to/from the site XML."""
 
     """
-
+    XML Elements' tags in the site XML format of different annotation
+    components - FNodes (Unit), Terminals, remote and implicit Units
+    and linkages.
+    """
     class _Tags:
         Unit = 'unit'
         Terminal = 'word'
@@ -76,15 +46,29 @@ class SiteCfg:
         Linkage = 'linkage'
 
     class _Paths:
+        """Paths (from the XML root) to different parts of the annotation -
+        the main units part, the discontiguous units, the paragraph
+        elements and the annotation units.
+        """
         Main = 'units'
         Paragraphs = 'units/unit/*'
         Annotation = 'units/unit/*/*'
         Discontiguous = 'unitGroups'
 
     class _Types:
+        """Possible types for the Type attribute, which is roughly equivalent
+        to Edge/Node tag. Only specially-handled types are here, which is
+        the punctuation type.
+        """
         Punct = 'Punctuation'
 
     class _Attr:
+        """Attribute names in the XML elements (not all exist in all elements)
+        - passage and site ID, discontiguous unit ID, UCCA tag, uncertain
+        flag, user remarks and linkage arguments. NodeID is special
+        because we set it for every unit that was already converted, and
+        it's not present in the original XML.
+        """
         PassageID = 'passageID'
         SiteID = 'id'
         NodeID = 'internal_id'
@@ -101,10 +85,17 @@ class SiteCfg:
     Paths = _Paths
     Types = _Types
     Attr = _Attr
+
+    """ XML tag used for wrapping words (non-punctuation) and unit groups """
     TBD = 'To Be Defined'
+
+    """ values for True/False in the site XML (strings) """
     TRUE = 'true'
     FALSE = 'false'
+
+    """ version of site XML scheme which self adheres to """
     SchemeVersion = '1.0.3'
+    """ mapping of site XML tag attribute to layer1 edge tags. """
     TagConversion = {'Linked U': EdgeTags.ParallelScene,
                      'Parallel Scene': EdgeTags.ParallelScene,
                      'Function': EdgeTags.Function,
@@ -121,6 +112,7 @@ class SiteCfg:
                      'Relator': EdgeTags.Relator,
                      'Time': EdgeTags.Time}
 
+    """ mapping of layer1.EdgeTags to site XML tag attributes. """
     EdgeConversion = {EdgeTags.ParallelScene: 'Parallel Scene',
                       EdgeTags.Function: 'Function',
                       EdgeTags.Participant: 'Participant',
@@ -148,10 +140,22 @@ class SiteUtil:
 
     """
     __init__ = None
-    unescape = lambda x: xml.sax.saxutils.unescape(x, {'&quot;': '"'})
-    set_id = lambda e, ID: e.set(SiteCfg.Attr.NodeID, ID)
-    get_node = lambda e, mapp: mapp.get(e.get(SiteCfg.Attr.SiteID))
-    set_node = lambda e, n, mapp: mapp.update({e.get(SiteCfg.Attr.SiteID): n})
+
+    @staticmethod
+    def unescape(x):
+        return xml.sax.saxutils.unescape(x, {'&quot;': '"'})
+
+    @staticmethod
+    def set_id(e, i):
+        e.set(SiteCfg.Attr.NodeID, i)
+
+    @staticmethod
+    def get_node(e, mapp):
+        return mapp.get(e.get(SiteCfg.Attr.SiteID))
+
+    @staticmethod
+    def set_node(e, n, mapp):
+        mapp.update({e.get(SiteCfg.Attr.SiteID): n})
 
 
 def _from_site_terminals(elem, passage, elem2node):
@@ -161,23 +165,21 @@ def _from_site_terminals(elem, passage, elem2node):
     which excapsulates each terminal, so we use both for creating our
     :class:layer0.Terminal objects.
 
-    Args:
-        elem: root element of the XML hierarchy
-        passage: passage to add the Terminals to, already with Layer0 object
-        elem2node: dictionary whose keys are site IDs and values are the
+    :param elem: root element of the XML hierarchy
+    :param passage: passage to add the Terminals to, already with Layer0 object
+    :param elem2node: dictionary whose keys are site IDs and values are the
             created UCCA Nodes which are equivalent. This function updates the
             dictionary by mapping each word wrapper to a UCCA Terminal.
-
     """
-    l0 = layer0.Layer0(passage)
+    layer0.Layer0(passage)
     for para_num, paragraph in enumerate(elem.iterfind(
             SiteCfg.Paths.Paragraphs)):
         words = list(paragraph.iter(SiteCfg.Tags.Terminal))
         wrappers = []
         for word in words:
             # the list added has only one element, because XML is hierarchical
-            wrappers.extend([x for x in paragraph.iter(SiteCfg.Tags.Unit)
-                             if word in list(x)])
+            wrappers += [x for x in paragraph.iter(SiteCfg.Tags.Unit)
+                         if word in list(x)]
         for word, wrapper in zip(words, wrappers):
             punct = (wrapper.get(SiteCfg.Attr.ElemTag) == SiteCfg.Types.Punct)
             text = SiteUtil.unescape(word.text)
@@ -196,52 +198,49 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
     After creating (or retrieving) the current node, which corresponds to the
     XML element given, we iterate its subelements and parse them recuresively.
 
-    Args:
-        elem: the XML element to parse
-        parent: layer1.FouncdationalNode parent of the current XML element
-        passage: the core.Passage we are converting to
-        groups: the main XML element of the discontiguous units (unitGroups)
-        elem2node: mapping between site IDs and Nodes, updated here
+    :param elem: the XML element to parse
+    :param parent: layer1.FouncdationalNode parent of the current XML element
+    :param passage: the core.Passage we are converting to
+    :param groups: the main XML element of the discontiguous units (unitGroups)
+    :param elem2node: mapping between site IDs and Nodes, updated here
 
-    Returns:
-        a list of (parent, elem) pairs which weren't process, as they should
+    :return a list of (parent, elem) pairs which weren't process, as they should
         be process last (usually because they contain references to not-yet
         created Nodes).
-
     """
 
-    def _get_node(elem):
+    def _get_node(node_elem):
         """Given an XML element, returns its node if it was already created.
 
         If not created, returns None. If the element is a part of discontiguous
         unit, returns the discontiguous unit corresponding Node (if exists).
 
         """
-        gid = elem.get(SiteCfg.Attr.GroupID)
+        gid = node_elem.get(SiteCfg.Attr.GroupID)
         if gid is not None:
             return elem2node.get(gid)
         else:
-            return SiteUtil.get_node(elem, elem2node)
+            return SiteUtil.get_node(node_elem, elem2node)
 
-    def _get_work_elem(elem):
+    def _get_work_elem(node_elem):
         """Given XML element, return either itself or its discontiguos unit."""
-        gid = elem.get(SiteCfg.Attr.GroupID)
-        return (elem if gid is None
-                else [elem for elem in groups
-                      if elem.get(SiteCfg.Attr.SiteID) == gid][0])
+        gid = node_elem.get(SiteCfg.Attr.GroupID)
+        return (node_elem if gid is None
+                else [group_elem for group_elem in groups
+                      if group_elem.get(SiteCfg.Attr.SiteID) == gid][0])
 
-    def _fill_attributes(elem, node):
+    def _fill_attributes(node_elem, target_node):
         """Fills in node the remarks and uncertain attributes from XML elem."""
-        if elem.get(SiteCfg.Attr.Uncertain) == 'true':
-            node.attrib['uncertain'] = True
-        if elem.get(SiteCfg.Attr.Remarks) is not None:
-            node.extra['remarks'] = SiteUtil.unescape(
-                elem.get(SiteCfg.Attr.Remarks))
+        if node_elem.get(SiteCfg.Attr.Uncertain) == 'true':
+            target_node.attrib['uncertain'] = True
+        if node_elem.get(SiteCfg.Attr.Remarks) is not None:
+            target_node.extra['remarks'] = SiteUtil.unescape(
+                node_elem.get(SiteCfg.Attr.Remarks))
 
     l1 = passage.layer(layer1.LAYER_ID)
     tbd = []
 
-    # Unit tag means its a regular, heirarichally built unit
+    # Unit tag means its a regular, hierarchically built unit
     if elem.tag == SiteCfg.Tags.Unit:
         node = _get_node(elem)
         # Only nodes created by now are the terminals, or discontiguous units
@@ -256,8 +255,8 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
                 # So, we don't need to create the node, just keep processing
                 # our subelements (as subelements of the discontiguous unit)
                 for subelem in elem:
-                    tbd.extend(_parse_site_units(subelem, node, passage,
-                                                 groups, elem2node))
+                    tbd += _parse_site_units(subelem, node, passage,
+                                             groups, elem2node)
         else:
             # Creating a new node, either regular or discontiguous.
             # Note that for discontiguous units we have a different work_elem,
@@ -271,8 +270,8 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
             # For iterating the subelements, we don't use work_elem, as it may
             # out of the current XML hierarchy we are processing (discont...)
             for subelem in elem:
-                tbd.extend(_parse_site_units(subelem, node, passage,
-                                             groups, elem2node))
+                tbd += _parse_site_units(subelem, node, passage,
+                                         groups, elem2node)
     # Implicit units have their own tag, and aren't recursive, but nonetheless
     # are treated the same as regular units
     elif elem.tag == SiteCfg.Tags.Implicit:
@@ -293,13 +292,11 @@ def _from_site_annotation(elem, passage, elem2node):
     Parses the whole annotation, given that the terminals are already processed
     and converted and appear in elem2node.
 
-    Args:
-        elem: root XML element
-        passage: the passage to create, with layer0, w/o layer1
-        elem2node: mapping from site ID to Nodes, should contain the Terminals
+    :param elem: root XML element
+    :param passage: the passage to create, with layer0, w/o layer1
+    :param elem2node: mapping from site ID to Nodes, should contain the Terminals
 
-    Raises:
-        SiteXMLUnknownElement: if an unknown, unhandled element is found
+    :raise SiteXMLUnknownElement: if an unknown, unhandled element is found
 
     """
     tbd = []
@@ -309,8 +306,8 @@ def _from_site_annotation(elem, passage, elem2node):
 
     # this takes care of the hierarchical annotation
     for subelem in elem.iterfind(SiteCfg.Paths.Annotation):
-        tbd.extend(_parse_site_units(subelem, l1head, passage, groups_root,
-                                     elem2node))
+        tbd += _parse_site_units(subelem, l1head, passage, groups_root,
+                                 elem2node)
 
     # Handling remotes and linkages, which usually contain IDs from all over
     # the annotation, hence must be taken care of after all elements are
@@ -320,9 +317,8 @@ def _from_site_annotation(elem, passage, elem2node):
             edge_tag = SiteCfg.TagConversion[elem.get(SiteCfg.Attr.ElemTag)]
             child = SiteUtil.get_node(elem, elem2node)
             if child is None:  # bug in XML, points to an invalid ID
-                sys.stderr.write(
-                    "Warning: remoteUnit with ID {} is invalid - skipping\n".
-                    format(elem.get(SiteCfg.Attr.SiteID)))
+                print("Warning: remoteUnit with ID {} is invalid - skipping".
+                      format(elem.get(SiteCfg.Attr.SiteID)), file=sys.stderr)
                 continue
             l1.add_remote(parent, edge_tag, child)
         elif elem.tag == SiteCfg.Tags.Linkage:
@@ -336,12 +332,9 @@ def _from_site_annotation(elem, passage, elem2node):
 def from_site(elem):
     """Converts site XML structure to :class:core.Passage object.
 
-    Args:
-        elem: root element of the XML structure
+    :param elem: root element of the XML structure
 
-    Returns:
-        The converted core.Passage object
-
+    :return The converted core.Passage object
     """
     pid = elem.find(SiteCfg.Paths.Main).get(SiteCfg.Attr.PassageID)
     passage = core.Passage(pid)
@@ -352,7 +345,12 @@ def from_site(elem):
 
 
 def to_site(passage):
-    """Converts a passage to the site XML format."""
+    """Converts a passage to the site XML format.
+
+    :param passage: the passage to convert
+
+    :return the root element of the standard XML structure
+    """
 
     class _State:
         def __init__(self):
@@ -361,31 +359,31 @@ def to_site(passage):
             self.elems = {}
 
         def get_id(self):
-            ID = str(self.ID)
+            ret = str(self.ID)
             self.ID += 1
-            return ID
+            return ret
 
-        def update(self, elem, node):
-            self.mapping[node.ID] = elem.get(SiteCfg.Attr.SiteID)
-            self.elems[node.ID] = elem
+        def update(self, node_elem, node):
+            self.mapping[node.ID] = node_elem.get(SiteCfg.Attr.SiteID)
+            self.elems[node.ID] = node_elem
 
     state = _State()
 
     def _word(terminal):
         tag = SiteCfg.Types.Punct if terminal.punct else SiteCfg.TBD
         word = ET.Element(SiteCfg.Tags.Terminal,
-                                {SiteCfg.Attr.SiteID: state.get_id()})
+                          {SiteCfg.Attr.SiteID: state.get_id()})
         word.text = terminal.text
-        elem = ET.Element(SiteCfg.Tags.Unit,
-                                {SiteCfg.Attr.ElemTag: tag,
-                           SiteCfg.Attr.SiteID: state.get_id(),
-                           SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
-                           SiteCfg.Attr.Uncertain: SiteCfg.FALSE})
-        elem.append(word)
-        state.update(elem, terminal)
-        return elem
+        word_elem = ET.Element(SiteCfg.Tags.Unit,
+                               {SiteCfg.Attr.ElemTag: tag,
+                                SiteCfg.Attr.SiteID: state.get_id(),
+                                SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
+                                SiteCfg.Attr.Uncertain: SiteCfg.FALSE})
+        word_elem.append(word)
+        state.update(word_elem, terminal)
+        return word_elem
 
-    def _cunit(node, subelem):
+    def _cunit(node, cunit_subelem):
         uncertain = (SiteCfg.TRUE if node.attrib.get('uncertain')
                      else SiteCfg.FALSE)
         suggestion = (SiteCfg.TRUE if node.attrib.get('suggest')
@@ -397,64 +395,64 @@ def to_site(passage):
                 for e in node)
             else SiteCfg.FALSE)
         elem_tag = SiteCfg.EdgeConversion[node.ftag]
-        elem = ET.Element(SiteCfg.Tags.Unit,
+        cunit_elem = ET.Element(SiteCfg.Tags.Unit,
                                 {SiteCfg.Attr.ElemTag: elem_tag,
-                           SiteCfg.Attr.SiteID: state.get_id(),
-                           SiteCfg.Attr.Unanalyzable: unanalyzable,
-                           SiteCfg.Attr.Uncertain: uncertain,
-                           SiteCfg.Attr.Suggestion: suggestion})
-        if subelem is not None:
-            elem.append(subelem)
+                                 SiteCfg.Attr.SiteID: state.get_id(),
+                                 SiteCfg.Attr.Unanalyzable: unanalyzable,
+                                 SiteCfg.Attr.Uncertain: uncertain,
+                                 SiteCfg.Attr.Suggestion: suggestion})
+        if cunit_subelem is not None:
+            cunit_elem.append(cunit_subelem)
         # When we add chunks of discontiguous units, we don't want them to
         # overwrite the original mapping (leave it to the unitGroupId)
         if node.ID not in state.mapping:
-            state.update(elem, node)
-        return elem
+            state.update(cunit_elem, node)
+        return cunit_elem
 
     def _remote(edge):
         uncertain = (SiteCfg.TRUE if edge.child.attrib.get('uncertain')
                      else SiteCfg.FALSE)
         suggestion = (SiteCfg.TRUE if edge.child.attrib.get('suggest')
                       else SiteCfg.FALSE)
-        elem = ET.Element(SiteCfg.Tags.Remote,
-                                {SiteCfg.Attr.ElemTag:
-                           SiteCfg.EdgeConversion[edge.tag],
-                           SiteCfg.Attr.SiteID: state.mapping[edge.child.ID],
-                           SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
-                           SiteCfg.Attr.Uncertain: uncertain,
-                           SiteCfg.Attr.Suggestion: suggestion})
-        state.elems[edge.parent.ID].insert(0, elem)
+        remote_elem = ET.Element(SiteCfg.Tags.Remote,
+                                 {SiteCfg.Attr.ElemTag:
+                                  SiteCfg.EdgeConversion[edge.tag],
+                                  SiteCfg.Attr.SiteID: state.mapping[edge.child.ID],
+                                  SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
+                                  SiteCfg.Attr.Uncertain: uncertain,
+                                  SiteCfg.Attr.Suggestion: suggestion})
+        state.elems[edge.parent.ID].insert(0, remote_elem)
 
     def _implicit(node):
         uncertain = (SiteCfg.TRUE if node.incoming[0].attrib.get('uncertain')
                      else SiteCfg.FALSE)
         suggestion = (SiteCfg.TRUE if node.attrib.get('suggest')
                       else SiteCfg.FALSE)
-        elem = ET.Element(SiteCfg.Tags.Implicit,
-                                {SiteCfg.Attr.ElemTag:
-                           SiteCfg.EdgeConversion[node.ftag],
-                           SiteCfg.Attr.SiteID: state.get_id(),
-                           SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
-                           SiteCfg.Attr.Uncertain: uncertain,
-                           SiteCfg.Attr.Suggestion: suggestion})
-        state.elems[node.fparent.ID].insert(0, elem)
+        implicit_elem = ET.Element(SiteCfg.Tags.Implicit,
+                                   {SiteCfg.Attr.ElemTag:
+                                    SiteCfg.EdgeConversion[node.ftag],
+                                    SiteCfg.Attr.SiteID: state.get_id(),
+                                    SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
+                                    SiteCfg.Attr.Uncertain: uncertain,
+                                    SiteCfg.Attr.Suggestion: suggestion})
+        state.elems[node.fparent.ID].insert(0, implicit_elem)
 
     def _linkage(link):
         args = [str(state.mapping[x.ID]) for x in link.arguments]
         linker_elem = state.elems[link.relation.ID]
-        linkage = ET.Element(SiteCfg.Tags.Linkage, {'args': ','.join(args)})
-        linker_elem.insert(0, linkage)
+        linkage_elem = ET.Element(SiteCfg.Tags.Linkage, {'args': ','.join(args)})
+        linker_elem.insert(0, linkage_elem)
 
     def _get_parent(node):
         try:
-            parent = node.parents[0]
-            if parent.tag == layer1.NodeTags.Punctuation:
-                parent = parent.parents[0]
-            if parent in passage.layer(layer1.LAYER_ID).heads:
-                parent = None  # the parent is the fake FNodes head
+            ret = node.parents[0]
+            if ret.tag == layer1.NodeTags.Punctuation:
+                ret = ret.parents[0]
+            if ret in passage.layer(layer1.LAYER_ID).heads:
+                ret = None  # the parent is the fake FNodes head
         except IndexError:
-            parent = None
-        return parent
+            ret = None
+        return ret
 
     para_elems = []
 
@@ -497,6 +495,7 @@ def to_site(passage):
     # Because we keep changing the tree, we must break and re-iterate each time
     while True:
         for elems_root in para_elems:
+            changed = False
             for parent in elems_root.iter():
                 changed = False
                 if any(x.get(SiteCfg.Attr.GroupID) for x in parent):
@@ -536,7 +535,7 @@ def to_site(passage):
     groups.extend(unit_groups)
     units = ET.SubElement(root, 'units', {SiteCfg.Attr.PassageID: passage.ID})
     units0 = ET.SubElement(units, SiteCfg.Tags.Unit,
-                                 {SiteCfg.Attr.ElemTag: SiteCfg.TBD,
+                           {SiteCfg.Attr.ElemTag: SiteCfg.TBD,
                             SiteCfg.Attr.SiteID: '0',
                             SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
                             SiteCfg.Attr.Uncertain: SiteCfg.FALSE})
@@ -553,49 +552,47 @@ def to_standard(passage):
     The standard XML specification is not contained here, but it uses a very
     shallow structure with attributes to create hierarchy.
 
-    Args:
-        passage: the passage to convert
+    :param passage: the passage to convert
 
-    Returns:
-        the root element of the standard XML structure
-
+    :return the root element of the standard XML structure
     """
 
     # This utility stringifies the Unit's attributes for proper XML
     # we don't need to escape the character - the serializer of the XML element
     # will do it (e.g. tostring())
-    stringify = lambda dic: {str(k): str(v) for k, v in dic.items()}
+    def _stringify(dic):
+        return {str(k): str(v) for k, v in dic.items()}
 
     # Utility to add an extra element if exists in the object
-    add_extra = lambda obj, elem: obj.extra and ET.SubElement(
-        elem, 'extra', stringify(obj.extra))
+    def _add_extra(obj, elem):
+        return obj.extra and ET.SubElement(elem, 'extra', _stringify(obj.extra))
 
     # Adds attributes element (even if empty)
-    add_attrib = lambda obj, elem: ET.SubElement(elem, 'attributes',
-                                                       stringify(obj.attrib))
+    def _add_attrib(obj, elem):
+        return ET.SubElement(elem, 'attributes', _stringify(obj.attrib))
 
     root = ET.Element('root', passageID=str(passage.ID), annotationID='0')
-    add_attrib(passage, root)
-    add_extra(passage, root)
+    _add_attrib(passage, root)
+    _add_extra(passage, root)
 
     for layer in sorted(passage.layers, key=operator.attrgetter('ID')):
         layer_elem = ET.SubElement(root, 'layer', layerID=layer.ID)
-        add_attrib(layer, layer_elem)
-        add_extra(layer, layer_elem)
+        _add_attrib(layer, layer_elem)
+        _add_extra(layer, layer_elem)
         for node in layer.all:
             node_elem = ET.SubElement(layer_elem, 'node',
-                                            ID=node.ID, type=node.tag)
-            add_attrib(node, node_elem)
-            add_extra(node, node_elem)
+                                      ID=node.ID, type=node.tag)
+            _add_attrib(node, node_elem)
+            _add_extra(node, node_elem)
             for edge in node:
                 edge_elem = ET.SubElement(node_elem, 'edge',
-                                                toID=edge.child.ID, type=edge.tag)
-                add_attrib(edge, edge_elem)
-                add_extra(edge, edge_elem)
+                                          toID=edge.child.ID, type=edge.tag)
+                _add_attrib(edge, edge_elem)
+                _add_extra(edge, edge_elem)
     return root
 
 
-def from_standard(root, extra_funcs={}):
+def from_standard(root, extra_funcs=None):
 
     attribute_converters = {
         'paragraph': (lambda x: int(x)),
@@ -615,41 +612,44 @@ def from_standard(root, extra_funcs={}):
                  layer1.NodeTags.Linkage: layer1.Linkage,
                  layer1.NodeTags.Punctuation: layer1.PunctNode}
 
-    def get_attrib(elem):
+    if extra_funcs is None:
+        extra_funcs = {}
+
+    def _get_attrib(elem):
         return {k: attribute_converters.get(k, str)(v)
                 for k, v in elem.find('attributes').items()}
 
-    def add_extra(obj, elem):
+    def _add_extra(obj, elem):
         if elem.find('extra') is not None:
             for k, v in elem.find('extra').items():
                 obj.extra[k] = extra_funcs.get(k, str)(v)
 
-    passage = core.Passage(root.get('passageID'), attrib=get_attrib(root))
-    add_extra(passage, root)
+    passage = core.Passage(root.get('passageID'), attrib=_get_attrib(root))
+    _add_extra(passage, root)
     edge_elems = []
     for layer_elem in root.findall('layer'):
-        layerID = layer_elem.get('layerID')
-        layer = layer_objs[layerID](passage, attrib=get_attrib(layer_elem))
-        add_extra(layer, layer_elem)
+        layer_id = layer_elem.get('layerID')
+        layer = layer_objs[layer_id](passage, attrib=_get_attrib(layer_elem))
+        _add_extra(layer, layer_elem)
         # some nodes are created automatically, skip creating them when found
         # in the XML (they should have 'constant' IDs) but take their edges
         # and attributes/extra from the XML (may have changed from the default)
         created_nodes = {x.ID: x for x in layer.all}
         for node_elem in layer_elem.findall('node'):
-            nodeID = node_elem.get('ID')
+            node_id = node_elem.get('ID')
             tag = node_elem.get('type')
-            node = created_nodes[nodeID] if nodeID in created_nodes else \
-                node_objs[tag](root=passage, ID=nodeID, tag=tag,
-                               attrib=get_attrib(node_elem))
-            add_extra(node, node_elem)
-            edge_elems.extend((node, x) for x in node_elem.findall('edge'))
+            node = created_nodes[node_id] if node_id in created_nodes else \
+                node_objs[tag](root=passage, ID=node_id, tag=tag,
+                               attrib=_get_attrib(node_elem))
+            _add_extra(node, node_elem)
+            edge_elems += [(node, x) for x in node_elem.findall('edge')]
 
     # Adding edges (must have all nodes before doing so)
     for from_node, edge_elem in edge_elems:
         to_node = passage.nodes[edge_elem.get('toID')]
         tag = edge_elem.get('type')
-        edge = from_node.add(tag, to_node, edge_attrib=get_attrib(edge_elem))
-        add_extra(edge, edge_elem)
+        edge = from_node.add(tag, to_node, edge_attrib=_get_attrib(edge_elem))
+        _add_extra(edge, edge_elem)
 
     return passage
 
@@ -670,12 +670,10 @@ def is_punctuation(token):
 def from_text(text, passage_id='1'):
     """Converts from tokenized strings to a Passage object.
 
-    Args:
-        text: a sequence of strings, where each one will be a new paragraph.
+    :param text: a sequence of strings, where each one will be a new paragraph.
+    :param passage_id: ID to set for passage
 
-    Returns:
-        a Passage object with only Terminals units.
-
+    :return a Passage object with only Terminals units.
     """
     p = core.Passage(passage_id)
     l0 = layer0.Layer0(p)
@@ -691,14 +689,11 @@ def from_text(text, passage_id='1'):
 def to_text(passage, sentences=True):
     """Converts from a Passage object to tokenized strings.
 
-    Args:
-        passage: the Passage object to convert
-        sentences: whether to break the Passage to sentences (one for string)
-        or leave as one string. Defaults to True
+    :param passage: the Passage object to convert
+    :param sentences: whether to break the Passage to sentences (one for string)
+                      or leave as one string. Defaults to True
 
-    Returns:
-        a list of strings - 1 if sentences=False, # of sentences otherwise
-
+    :return a list of strings - 1 if sentences=False, # of sentences otherwise
     """
     tokens = [x.text for x in sorted(passage.layer(layer0.LAYER_ID).all,
                                      key=operator.attrgetter('position'))]
@@ -717,14 +712,11 @@ def to_text(passage, sentences=True):
 def to_sequence(passage):
     """Converts from a Passage object to linearized text sequence.
 
-    Args:
-        passage: the Passage object to convert
+    :param passage: the Passage object to convert
 
-    Returns:
-        a list of strings - 1 if sentences=False, # of sentences otherwise
-
+    :return a list of strings - 1 if sentences=False, # of sentences otherwise
     """
-    def position(edge):
+    def _position(edge):
         while edge.child.layer.ID != layer0.LAYER_ID:
             edge = edge.child.outgoing[0]
         return tuple(map(edge.child.attrib.get, ('paragraph', 'paragraph_position')))
@@ -733,13 +725,12 @@ def to_sequence(passage):
     stacks = []
     edges = [e for u in passage.layer(layer1.LAYER_ID).all
              if not u.incoming for e in u.outgoing]
-    # TODO improve conversion to sequence
-    # avoid printing the same node more than once, refer to it by ID
+    # should avoid printing the same node more than once, refer to it by ID
     # convert back to passage
     # use Node.__str__ as it already does this...
     while True:
         if edges:
-            stacks.append(sorted(edges, key=position, reverse=True))
+            stacks.append(sorted(edges, key=_position, reverse=True))
         else:
             stacks[-1].pop()
             while not stacks[-1]:
@@ -761,108 +752,114 @@ def to_sequence(passage):
 ROOT = "ROOT"
 
 
-def from_conll(lines, passage_id):
-    """Converts from parsed text in CoNLL format to a Passage object.
+class DependencyNode:
+    def __init__(self, head_indices=None, rels=None, remotes=None, terminal=None):
+        self.head_indices = list(head_indices) if head_indices else []
+        self.rels = list(rels) if rels else []
+        self.remotes = list(remotes) if remotes else []
+        self.terminal = terminal
+        self.heads = None
+        self.children = []
+        self.node = None
+        self.level = None
+        self.preterminal = None
 
-    Args:
-        text: a multi-line string in CoNLL format, describing a single passage.
+    def __repr__(self):
+        return self.terminal.text if self.terminal else ROOT
 
-    Returns:
-        a Passage object.
 
+def read_conll(it, l0, paragraph):
+    # id, form, lemma, coarse pos, fine pos, features, head, relation
+    dep_nodes = [DependencyNode()]  # dummy root
+    for line_number, line in enumerate(it):
+        fields = line.split()
+        if not fields:
+            break
+        position, text, _, tag, _, _, head_position, rel = fields[:8]
+        if line_number + 1 != int(position):
+            raise Exception("line number and position do not match: %d != %s" %
+                            (line_number + 1, position))
+        punctuation = (tag == layer0.NodeTags.Punct)
+        terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
+        dep_nodes.append(DependencyNode([int(head_position)], [rel], remotes=[False],
+                                        terminal=terminal))
+
+    return (dep_nodes, dep_nodes) if len(dep_nodes) > 1 else (False, False)
+
+
+def read_sdp(it, l0, paragraph):
+    # id, form, lemma, pos, top, pred, frame, arg1, arg2, ...
+    dep_nodes = [DependencyNode()]  # dummy root
+    preds = list(dep_nodes)
+    for line_number, line in enumerate(it):
+        fields = line.split()
+        if not fields:
+            break
+        position, text, _, tag, _, pred, _ = fields[:7]
+        # (head positions, dependency relations, is remote for each one)
+        heads = [(i + 1, rel.rstrip("*"), rel.endswith("*"))
+                 for i, rel in enumerate(fields[7:]) if rel != "_"]
+        if not heads:
+            heads = [(0, ROOT, False)]
+        heads = zip(*heads)
+        if line_number + 1 != int(position):
+            raise Exception("line number and position do not match: %d != %s" %
+                            (line_number + 1, position))
+        punctuation = (tag == layer0.NodeTags.Punct)
+        terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
+        node = DependencyNode(*heads, terminal=terminal)
+        dep_nodes.append(node)
+        if pred == "+":
+            preds.append(node)
+
+    return (dep_nodes, preds) if len(dep_nodes) > 1 else (False, False)
+
+
+def from_dependency(lines, passage_id, reader=read_conll):
+    """Converts from parsed text in dependency format to a Passage object.
+
+    :param lines: an iterable of lines in dependency format, describing a single passage.
+    :param passage_id: ID to set for passage
+    :param reader: either read_sdp or read_conll, the function to read this dependency format
+
+    :return a Passage object.
     """
-    class DependencyNode:
-        def __init__(self, head_position=None, rel=None, terminal=None, node=None, head=None):
-            self.head_position = head_position
-            self.rel = rel
-            self.terminal = terminal
-            self.node = node
-            self.head = head
-            self.children = []
-            self.level = None
 
-        def __repr__(self):
-            return self.terminal.text if self.terminal else "ROOT"
-
-    def topological_sort(dep_nodes):
+    def _topological_sort(nodes):
         # sort into topological ordering to create parents before children
         levels = defaultdict(set)   # levels start from 0 (root)
-        remaining = [dep_node for dep_node in dep_nodes if not dep_node.children]  # leaves
+        remaining = [node for node in nodes if not node.children]  # leaves
         while remaining:
-            dep_node = remaining.pop()
-            if dep_node.level is not None:  # done already
-                pass
-            elif dep_node.head is None:  # root
-                dep_node.level = 0
-                levels[0].add(dep_node)
-            elif dep_node.head.level is None:  # need to process head first
-                remaining.append(dep_node)
-                remaining.append(dep_node.head)
-            else:  # done with head
-                dep_node.level = 1 + dep_node.head.level
-                levels[dep_node.level].add(dep_node)
+            node = remaining.pop()
+            if node.level is not None:  # done already
+                continue
+            if node.heads:
+                remaining_heads = {h for h in node.heads if h.level is None}
+                if remaining_heads:  # need to process heads first
+                    intersection = remaining_heads.intersection(remaining)
+                    assert not intersection, \
+                        "Cycle detected: '%s' and %s" % (node, intersection)
+                    remaining += [node] + list(remaining_heads)
+                    continue
+                node.level = 1 + max(h.level for h in node.heads)  # done with heads
+            else:  # root
+                node.level = 0
+            levels[node.level].add(node)
 
-        return [dep_node for level, level_nodes in sorted(levels.items())
-                if level > 0  # omit the dummy root
-                for dep_node in sorted(level_nodes, key=lambda x: x.terminal.position)]
+        return [node for level, level_nodes in sorted(levels.items())
+                if level > 0  # omit dummy root
+                for node in sorted(level_nodes, key=lambda x: x.terminal.position)]
 
-    def label_edge(dep_node):
-        children = [child.rel for child in dep_node.children]
-        if layer0.is_punct(dep_node.terminal):
+    def _label_edge(node):
+        child_rels = [child_rel for _, child_rel in node.children]
+        if layer0.is_punct(node.terminal):
             return EdgeTags.Punctuation
-        elif EdgeTags.ParallelScene in children:
+        elif EdgeTags.ParallelScene in child_rels:
             return EdgeTags.ParallelScene
-        elif EdgeTags.Participant in children:
+        elif EdgeTags.Participant in child_rels:
             return EdgeTags.Process
         else:
             return EdgeTags.Center
-
-    def create_nodes(dep_nodes):
-        # create nodes starting from the root and going down to pre-terminals
-        for dep_node in topological_sort(dep_nodes):
-            if dep_node.rel == EdgeTags.Terminal:  # part of non-analyzable expression
-                head = dep_node.head
-                if layer0.is_punct(head.terminal) and head.head.head is not None:
-                    head = head.head  # do not put terminals and punctuation together
-                try:
-                    dep_node.preterminal = head.preterminal  # only edges to layer 0 can be T
-                except AttributeError:
-                    raise Exception("Node '%s' has no preterminal" % head)
-            elif dep_node.rel == ROOT:  # a child of the dummy root will be a root itself
-                dep_node.preterminal = l1.add_fnode(None, label_edge(dep_node))
-            else:
-                dep_node.node = l1.add_fnode(dep_node.head.node, dep_node.rel)
-                if dep_node.children:    # non-leaf, must add child node as pre-terminal
-                    dep_node.preterminal = l1.add_fnode(dep_node.node, label_edge(dep_node))
-                else:
-                    dep_node.preterminal = dep_node.node
-
-            # link pre-terminal to terminal
-            dep_node.preterminal.add(EdgeTags.Terminal, dep_node.terminal)
-            if layer0.is_punct(dep_node.terminal):
-                dep_node.preterminal.tag = layer1.NodeTags.Punctuation
-
-    def read_paragraph(it):
-        dep_nodes = [DependencyNode()]  # dummy root
-        for line_number, line in enumerate(it):
-            fields = line.split()
-            if not fields:
-                break
-            position, text, _, tag, _, _, head_position, rel = fields[:8]
-            if line_number + 1 != int(position):
-                raise Exception("line number and position do not match: %d != %s" %
-                                (line_number + 1, position))
-            punctuation = (tag == layer0.NodeTags.Punct)
-            dep_nodes.append(DependencyNode(int(head_position), rel,
-                                            l0.add_terminal(text=text,
-                                                            punct=punctuation,
-                                                            paragraph=paragraph)))
-
-        for node in dep_nodes[1:]:
-            node.head = dep_nodes[node.head_position]
-            dep_nodes[node.head_position].children.append(node)
-
-        return dep_nodes if len(dep_nodes) > 1 else False
 
     p = core.Passage(passage_id)
     l0 = layer0.Layer0(p)
@@ -872,27 +869,115 @@ def from_conll(lines, passage_id):
     # read dependencies and terminals from lines and create nodes based upon them
     line_iterator = iter(lines)
     while True:
-        line_dep_nodes = read_paragraph(line_iterator)
-        if not line_dep_nodes:
+        dep_nodes, preds = reader(line_iterator, l0, paragraph)
+        if not dep_nodes:
             break
-        create_nodes(line_dep_nodes)
         paragraph += 1
+        for dep_node in dep_nodes[1:]:
+            dep_node.heads = [preds[i] for i in dep_node.head_indices]
+            for head, rel in zip(dep_node.heads, dep_node.rels):
+                head.children.append((dep_node, rel))
+        # create nodes starting from the root and going down to pre-terminals
+        linkages = defaultdict(list)
+        dep_nodes = _topological_sort(dep_nodes)
+        for dep_node in dep_nodes:
+            if dep_node.rels == [EdgeTags.Terminal]:  # part of non-analyzable expression
+                head = dep_node.heads[0]
+                if layer0.is_punct(head.terminal) and head.heads and head.heads[0].heads:
+                    head = head.head  # do not put terminals and punctuation together
+                assert head.preterminal is not None, "Node '%s' has no preterminal" % head
+                dep_node.preterminal = head.preterminal  # only edges to layer 0 can be Terminal
+            elif dep_node.rels == [ROOT]:
+                # keep dep_node.node as None so that children are attached to the root
+                dep_node.preterminal = l1.add_fnode(None, _label_edge(dep_node))
+            else:
+                remotes = []
+                for head, rel, remote in zip(dep_node.heads, dep_node.rels, dep_node.remotes):
+                    if rel == EdgeTags.LinkArgument:
+                        linkages[head.node].append(dep_node.node)
+                    elif remote:
+                        remotes.append((head, rel))
+                    else:
+                        if dep_node.node is not None:
+                            print("More than one non-remote non-linkage parent for '%s': %s"
+                                  % (dep_node.node, dep_node.heads), file=sys.stderr)
+                        dep_node.node = l1.add_fnode(head.node, rel)
+                        dep_node.preterminal = \
+                            l1.add_fnode(dep_node.node, _label_edge(dep_node)) \
+                            if dep_node.children else dep_node.node
+                for head, rel in remotes:
+                    if head.node is None:  # add intermediate parent node
+                        head.node = head.preterminal
+                        head.preterminal = l1.add_fnode(head.node, _label_edge(head))
+                    l1.add_remote(head.node, rel, dep_node.node)
+
+            # link linkage arguments to relations
+            for link_relation, link_arguments in linkages.items():
+                l1.add_linkage(link_relation, *link_arguments)
+
+            # link pre-terminal to terminal
+            dep_node.preterminal.add(EdgeTags.Terminal, dep_node.terminal)
+            if layer0.is_punct(dep_node.terminal):
+                dep_node.preterminal.tag = layer1.NodeTags.Punctuation
 
     return p
 
 
-def to_conll(passage, test=False, sentences=False):
+def generate_conll(dep_nodes, test):
+    # id, form, lemma, coarse pos, fine pos, features
+    for i, dep_node in enumerate(dep_nodes):
+        position = i + 1
+        tag = dep_node.terminal.tag
+        fields = [position, dep_node.terminal.text, "_", tag, tag, "_"]
+        if not test:
+            heads = [(head + 1, rel) for head, rel, remote in
+                     zip(dep_node.head_indices, dep_node.rels, dep_node.remotes)
+                     if rel not in (EdgeTags.LinkRelation, EdgeTags.LinkArgument) and
+                     not remote]
+            if not heads:
+                heads = [(0, ROOT)]
+            if len(heads) > 1:
+                print("More than one non-remote non-linkage parent for '%s': %s"
+                      % (dep_node.terminal, heads),
+                      file=sys.stderr)
+            fields += heads[0]   # head, dependency relation
+        fields += ["_", "_"]   # projective head, projective dependency relation (optional)
+        yield fields
+    yield []
+
+
+def generate_sdp(dep_nodes, test):
+    # id, form, lemma, pos, top, pred, frame, arg1, arg2, ...
+    preds = sorted({head for dep_node in dep_nodes
+                    for head in dep_node.head_indices})
+    for dep_node in dep_nodes:
+        dep_node.heads = {head: rel + ("*" if remote else "") for head, rel, remote
+                          in zip(dep_node.head_indices, dep_node.rels, dep_node.remotes)
+                          if rel not in (EdgeTags.LinkRelation, EdgeTags.LinkArgument)}
+        # FIXME re-enable linkage relations after resolving cycles problem
+    for i, dep_node in enumerate(dep_nodes):
+        position = i + 1
+        tag = dep_node.terminal.tag
+        pred = "+" if i in preds else "-"
+        fields = [position, dep_node.terminal.text, "_", tag]
+        if not test:
+            fields += ["_", pred, "_"] + \
+                      [dep_node.heads.get(pred, "_") for pred in preds]  # rel for each pred
+        yield fields
+    yield []
+
+
+def to_dependency(passage, generator=generate_conll, test=False):
     """ Convert from a Passage object to a string in CoNLL-X format (conll)
 
-    Args:
-        passage: the Passage object to convert
-        test: whether to omit the head and deprel columns. Defaults to False
-        sentences: whether to break the Passage to sentences. Defaults to False
+    :param passage: the Passage object to convert
+    :param generator: function that generates lists of fields when given
+                      a list of DependencyNode objects and a 'test' flag
+    :param test: whether to omit the head and deprel columns. Defaults to False
 
-    Returns:
-        a multi-line string representing the dependencies in the passage
+    :return a multi-line string representing the dependencies in the passage
     """
-    ordered_tags = [    # ordered list of edge labels for head selection
+    _TAG_PRIORITY = [    # ordered list of edge labels for head selection
         EdgeTags.Center,
         EdgeTags.Connector,
         EdgeTags.ParallelScene,
@@ -912,76 +997,106 @@ def to_conll(passage, test=False, sentences=False):
         EdgeTags.Punctuation,
     ]
 
-    excluded_tags = [   # edge labels excluded from word dependencies
-        EdgeTags.LinkRelation,
-        EdgeTags.LinkArgument,
-    ]
+    def _find_head_child_edge(unit):
+        """ find the outgoing edge to the head child of this unit
+        :param unit: unit to find the edges from
+        :return the head outgoing edge
+        """
+        try:
+            return next(edge for edge_tag in _TAG_PRIORITY  # head selection by priority
+                        for edge in unit.outgoing
+                        if edge.tag == edge_tag and
+                        not edge.child.attrib.get("implicit"))
+        except StopIteration as e:
+            raise Exception("Cannot find head child for node ID " + unit.ID) from e
 
-    lines = []  # list of output lines to return
-    terminals = passage.layer(layer0.LAYER_ID).all  # terminal units from the passage
-    ends = textutil.break2sentences(passage) if sentences else textutil.break2paragraphs(passage)
-    last_end = 0    # position of last encountered sentence end
-    next_end = ends[0]  # position of next sentence end to come
-    last_root = None    # position of word in this sentence with ROOT relation
+    def _find_head_terminal(unit):
+        """ find the head terminal of this unit, by recursive descent
+        :param unit: unit to find the terminal of
+        :return the unit itself if it is a terminal, otherwise recursively applied to child
+        """
+        while unit.layer.ID != layer0.LAYER_ID:
+            unit = _find_head_child_edge(unit).child
+        return unit
 
-    def is_valid(edge):
-        """ filter out all implicit nodes and nodes with excluded tags """
-        return edge.tag not in excluded_tags and \
-            not edge.child.attrib.get("implicit") and \
-            not edge.attrib.get("remote")
-
-    def find_head_child_edge(unit):
-        """ find the outgoing edge to the head child of this unit """
-        for edge_tag in ordered_tags:   # head selection by priority order
-            for edge in filter(is_valid, unit.outgoing):
-                if edge.tag == edge_tag:
-                    return edge
-        raise Exception("Cannot find head child for node ID " + unit.ID)
-
-    def find_head_terminal(unit):
-        """ find the head terminal of this unit, by recursive descent """
-        return unit if unit.layer.ID == layer0.LAYER_ID else \
-            find_head_terminal(find_head_child_edge(unit).child)
-
-    def find_top_headed_edges(unit):
-        """ find uppermost edges above here, from a head child to its parent """
-        for edge in filter(is_valid, unit.incoming):
-            if edge == find_head_child_edge(edge.parent):
-                yield from find_top_headed_edges(edge.parent)
+    def _find_top_headed_edges(unit):
+        """ find uppermost edges above here, from a head child to its parent
+        :param unit: unit to start from
+        :return generator of edges
+        """
+        # remaining = list(unit.incoming)
+        # ret = []
+        # while remaining:
+        #     edge = remaining.pop()
+        #     if edge is _find_head_child_edge(edge.parent):
+        #         remaining += edge.parent.incoming
+        #     else:
+        #         ret.append(edge)
+        # return ret
+        for edge in unit.incoming:
+            if edge == _find_head_child_edge(edge.parent):
+                yield from _find_top_headed_edges(edge.parent)
             else:
                 yield edge
 
-    def filter_heads():
-        """ filter out heads that are outside the current sentence """
-        for pos, rel in head_positions:
-            if pos > 0 and (not next_end or pos <= next_end - last_end):
-                yield (pos, rel)
-            elif last_root:
-                yield (last_root, rel)
-
-    for node in sorted(terminals,
-                       key=operator.attrgetter('position')):
-        position = node.position - last_end
-        # counter, form, lemma, coarse POS tag, fine POS tag, features
-        fields = [position, node.text, "_", node.tag, node.tag, "_"]
-        if not test:
-            edges = find_top_headed_edges(node)
-            head_positions = [(find_head_terminal(edge.parent).position - last_end, edge.tag)
-                              for edge in edges]
-            head_positions = list(filter_heads())
-            if not head_positions or any(pos == position for pos, rel in head_positions):
-                head_positions = [(0, ROOT)]
-                last_root = position
-            fields += head_positions[0]   # head, dependency relation
-        fields += ["_", "_"]   # projective head, projective dependency relation (optional)
-        lines.append("\t".join([str(field) for field in fields]))
-        if node.position in ends:
-            lines.append("")
-            last_end = node.position
-            index = ends.index(node.position)
-            next_end = ends[index + 1] if index < len(ends) - 1 else None
-            last_root = None
+    lines = []  # list of output lines to return
+    terminals = passage.layer(layer0.LAYER_ID).all  # terminal units from the passage
+    dep_nodes = []
+    for terminal in sorted(terminals, key=operator.attrgetter("position")):
+        edges = list(_find_top_headed_edges(terminal))
+        head_indices = [_find_head_terminal(edge.parent).position - 1 for edge in edges]
+        # (head positions, dependency relations, is remote for each one)
+        heads = zip(*[(head_index, edge.tag, edge.attrib.get("remote"))
+                      for edge, head_index in zip(edges, head_indices)
+                      if head_index != terminal.position - 1])
+        dep_nodes.append(DependencyNode(*heads, terminal=terminal))
+    lines.append("\n".join("\t".join(str(field) for field in entry)
+                           for entry in generator(dep_nodes, test)))
     return "\n".join(lines)
+
+
+def from_conll(lines, passage_id):
+    """Converts from parsed text in CoNLL format to a Passage object.
+
+    :param lines: a multi-line string in CoNLL format, describing a single passage.
+    :param passage_id: ID to set for passage
+
+    :return a Passage object.
+    """
+    return from_dependency(lines, passage_id, read_conll)
+
+
+def to_conll(passage, test=False):
+    """ Convert from a Passage object to a string in CoNLL-X format (conll)
+
+    :param passage: the Passage object to convert
+    :param test: whether to omit the head and deprel columns. Defaults to False
+
+    :return a multi-line string representing the dependencies in the passage
+    """
+    return to_dependency(passage, generate_conll, test)
+
+
+def from_sdp(lines, passage_id):
+    """Converts from parsed text in SDP format to a Passage object.
+
+    :param lines: a multi-line string in SDP format, describing a single passage.
+    :param passage_id: ID to set for passage
+
+    :return a Passage object.
+    """
+    return from_dependency(lines, passage_id, read_sdp)
+
+
+def to_sdp(passage, test=False):
+    """ Convert from a Passage object to a string in SDP format (sdp)
+
+    :param passage: the Passage object to convert
+    :param test: whether to omit the top, head, frame, etc. columns. Defaults to False
+
+    :return a multi-line string representing the semantic dependencies in the passage
+    """
+    return to_dependency(passage, generate_sdp, test)
 
 
 def split2sentences(passage, remarks=False):

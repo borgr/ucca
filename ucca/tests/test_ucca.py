@@ -122,18 +122,18 @@ class CoreTests(unittest.TestCase):
         self.assertFalse(p1.equals(p2) or p2.equals(p1))
         ps2 = p2l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
         self.assertTrue(p1.equals(p2) and p2.equals(p1))
-        ps1a1 = p1l1.add_fnode(ps1, layer1.EdgeTags.Participant)
+        p1l1.add_fnode(ps1, layer1.EdgeTags.Participant)
         self.assertFalse(p1.equals(p2) or p2.equals(p1))
         self.assertTrue(ps1.equals(ps2, recursive=False))
-        ps2p1 = p2l1.add_fnode(ps2, layer1.EdgeTags.Process)
+        p2l1.add_fnode(ps2, layer1.EdgeTags.Process)
         self.assertFalse(p1.equals(p2) or p2.equals(p1))
-        ps2a2 = p2l1.add_fnode(ps2, layer1.EdgeTags.Participant)
+        p2l1.add_fnode(ps2, layer1.EdgeTags.Participant)
         self.assertFalse(p1.equals(p2) or p2.equals(p1))
-        ps1p2 = p1l1.add_fnode(ps1, layer1.EdgeTags.Process)
+        p1l1.add_fnode(ps1, layer1.EdgeTags.Process)
         self.assertTrue(p1.equals(p2) and p2.equals(p1))
         self.assertFalse(p1.equals(p2, ordered=True) or
                          p2.equals(p1, ordered=True))
-        ps1d3 = p1l1.add_fnode(ps1, layer1.EdgeTags.Adverbial, implicit=True)
+        p1l1.add_fnode(ps1, layer1.EdgeTags.Adverbial, implicit=True)
         ps2d3 = p2l1.add_fnode(ps2, layer1.EdgeTags.Adverbial)
         self.assertFalse(p1.equals(p2) or p2.equals(p1))
         ps2d3.attrib['implicit'] = True
@@ -146,7 +146,7 @@ class CoreTests(unittest.TestCase):
         self.assertFalse(p1.equals(p2) or p2.equals(p1))
         p2l1.add_punct(None, pnct2)
         self.assertTrue(p1.equals(p2) and p2.equals(p1))
-        p1l2 = core.Layer('2', p1)
+        core.Layer('2', p1)
         self.assertFalse(p1.equals(p2) or p2.equals(p1))
 
     def test_copying(self):
@@ -192,26 +192,27 @@ class Layer0Tests(unittest.TestCase):
     def test_terminals(self):
         """Tests :class:layer0.Terminal new and inherited functionality."""
         p = core.Passage('1')
-        l0 = layer0.Layer0(p)
-        terms = []
-        terms.append(layer0.Terminal(ID='0.1', root=p,
-                                     tag=layer0.NodeTags.Word,
-                                     attrib={'text': '1',
-                                             'paragraph': 1,
-                                             'paragraph_position': 1}))
-        terms.append(layer0.Terminal(ID='0.2', root=p,
-                                     tag=layer0.NodeTags.Word,
-                                     attrib={'text': '2',
-                                             'paragraph': 2,
-                                             'paragraph_position': 1}))
-        terms.append(layer0.Terminal(ID='0.3', root=p,
-                                     tag=layer0.NodeTags.Punct,
-                                     attrib={'text': '.',
-                                             'paragraph': 2,
-                                             'paragraph_position': 2}))
+        layer0.Layer0(p)
+        terms = [
+            layer0.Terminal(ID='0.1', root=p,
+                            tag=layer0.NodeTags.Word,
+                            attrib={'text': '1',
+                                    'paragraph': 1,
+                                    'paragraph_position': 1}),
+            layer0.Terminal(ID='0.2', root=p,
+                            tag=layer0.NodeTags.Word,
+                            attrib={'text': '2',
+                                    'paragraph': 2,
+                                    'paragraph_position': 1}),
+            layer0.Terminal(ID='0.3', root=p,
+                            tag=layer0.NodeTags.Punct,
+                            attrib={'text': '.',
+                                    'paragraph': 2,
+                                    'paragraph_position': 2})
+        ]
 
         p_copy = core.Passage('2')
-        l0_copy = layer0.Layer0(p_copy)
+        layer0.Layer0(p_copy)
         equal_term = layer0.Terminal(ID='0.1', root=p_copy,
                                      tag=layer0.NodeTags.Word,
                                      attrib={'text': '1',
@@ -240,7 +241,7 @@ class Layer0Tests(unittest.TestCase):
         p = core.Passage('1')
         l0 = layer0.Layer0(p)
         t1 = l0.add_terminal(text='1', punct=False)
-        t2 = l0.add_terminal(text='2', punct=True, paragraph=2)
+        l0.add_terminal(text='2', punct=True, paragraph=2)
         t3 = l0.add_terminal(text='3', punct=False, paragraph=2)
         self.assertSequenceEqual([x[0] for x in l0.pairs], [1, 2, 3])
         self.assertSequenceEqual([t.para_pos for t in l0.all], [1, 1, 2])
@@ -311,8 +312,6 @@ class Layer1Tests(unittest.TestCase):
         link1, ps1, ps23, punct2 = head.children
         p1, a1, punct1 = [x.child for x in ps1 if not x.attrib.get('remote')]
         ps2, link2, ps3 = ps23.children
-        a2, d2 = [x.child for x in ps2 if not x.attrib.get('remote')]
-        p3, a3, a4 = ps3.children
 
         self.assertSequenceEqual(l1.top_scenes, [ps1, ps2, ps3])
         self.assertSequenceEqual(l1.top_linkages, [lkg1, lkg2])
@@ -349,23 +348,18 @@ class Layer1Tests(unittest.TestCase):
 
     def test_destroy(self):
         p = TestUtil.create_passage()
-        l0 = p.layer('0')
         l1 = p.layer('1')
 
-        terms = l0.all
         head, lkg1, lkg2 = l1.heads
         link1, ps1, ps23, punct2 = head.children
         p1, a1, punct1 = [x.child for x in ps1 if not x.attrib.get('remote')]
         ps2, link2, ps3 = ps23.children
-        a2, d2 = [x.child for x in ps2 if not x.attrib.get('remote')]
-        p3, a3, a4 = ps3.children
 
         ps1.destroy()
         self.assertSequenceEqual(head.children, [link1, ps23, punct2])
         self.assertSequenceEqual(p1.parents, [ps2])
         self.assertFalse(a1.parents)
         self.assertFalse(punct1.parents)
-
 
     def test_discontiguous(self):
         """Tests FNode.discontiguous and FNode.get_sequences"""
@@ -572,6 +566,28 @@ class ConversionTests(unittest.TestCase):
         copy = convert.from_site(root)
         self.assertTrue(passage.equals(copy))
 
+    def test_to_conll(self):
+        passage = convert.from_standard(TestUtil.load_xml('test_files/standard3.xml'))
+        converted_dep = convert.to_conll(passage)
+        with open('test_files/standard3.conll') as f:
+            # f.write(converted_dep)
+            self.assertSequenceEqual(converted_dep, f.read())
+        converted_passage = convert.from_conll(converted_dep.split("\n"), passage.ID)
+        # ioutil.passage2file(converted_passage, 'test_files/standard3.conll.xml')
+        ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.conll.xml'))
+        self.assertTrue(converted_passage.equals(ref))
+
+    def test_to_sdp(self):
+        passage = convert.from_standard(TestUtil.load_xml('test_files/standard3.xml'))
+        converted_dep = convert.to_sdp(passage)
+        with open('test_files/standard3.sdp') as f:
+            # f.write(converted_dep)
+            self.assertSequenceEqual(converted_dep, f.read())
+        converted_passage = convert.from_sdp(converted_dep.split("\n"), passage.ID)
+        # ioutil.passage2file(converted_passage, 'test_files/standard3.sdp.xml')
+        ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.sdp.xml'))
+        self.assertTrue(converted_passage.equals(ref))
+
 
 class UtilTests(unittest.TestCase):
     """Tests the util module functions and classes."""
@@ -664,7 +680,7 @@ class UtilTests(unittest.TestCase):
     #     self.assertTrue(p.equals(copy))
 
 
-class TestUtil():
+class TestUtil:
     """Utilities for tests."""
     
     @staticmethod
@@ -686,9 +702,9 @@ class TestUtil():
 
         """
         p = core.Passage(ID='1')
-        l1 = core.Layer(ID='1', root=p)
-        l1 = core.Layer(ID='2', root=p, attrib={'test': True},
-                        orderkey=lambda x: -1 * int(x.ID.split('.')[1]))
+        core.Layer(ID='1', root=p)
+        core.Layer(ID='2', root=p, attrib={'test': True},
+                   orderkey=lambda x: -1 * int(x.ID.split('.')[1]))
 
         # Order is explicitly different in order to break the alignment between
         # the ID/Edge ordering and the order of creation/addition
@@ -775,7 +791,7 @@ class TestUtil():
         p3.add(layer1.EdgeTags.Terminal, terms[17])
         a3 = l1.add_fnode(ps3, layer1.EdgeTags.Participant)
         a3.add(layer1.EdgeTags.Terminal, terms[18])
-        a4 = l1.add_fnode(ps3, layer1.EdgeTags.Participant, implicit=True)
+        l1.add_fnode(ps3, layer1.EdgeTags.Participant, implicit=True)
 
         # Punctuation #20 - not under a scene
         l1.add_punct(None, terms[19])
@@ -900,8 +916,8 @@ class TestUtil():
         # [PS- [D IMPLICIT] [G IMPLICIT] [P 10 11 12 13]]
         # [-PS [A 17 18 [U 19]]]
         ps2 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
-        d2 = l1.add_fnode(ps2, layer1.EdgeTags.Adverbial, implicit=True)
-        g2 = l1.add_fnode(ps2, layer1.EdgeTags.Ground, implicit=True)
+        l1.add_fnode(ps2, layer1.EdgeTags.Adverbial, implicit=True)
+        l1.add_fnode(ps2, layer1.EdgeTags.Ground, implicit=True)
         p2 = l1.add_fnode(ps2, layer1.EdgeTags.Process)
         a2 = l1.add_fnode(ps2, layer1.EdgeTags.Participant)
         p2.add(layer1.EdgeTags.Terminal, terms[10])
@@ -916,7 +932,7 @@ class TestUtil():
         # [PS [P IMPLICIT] 14 [A 15 16]]
         ps3 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
         ps3.add(layer1.EdgeTags.Terminal, terms[14])
-        p3 = l1.add_fnode(ps3, layer1.EdgeTags.Process, implicit=True)
+        l1.add_fnode(ps3, layer1.EdgeTags.Process, implicit=True)
         a3 = l1.add_fnode(ps3, layer1.EdgeTags.Participant)
         a3.add(layer1.EdgeTags.Terminal, terms[15])
         a3.add(layer1.EdgeTags.Terminal, terms[16])
@@ -925,6 +941,8 @@ class TestUtil():
 
     @staticmethod
     def load_xml(path):
-        """XML file path ==> root element"""
+        """XML file path ==> root element
+        :param path: path to XML file
+        """
         with open(path) as f:
             return ETree.ElementTree().parse(f)

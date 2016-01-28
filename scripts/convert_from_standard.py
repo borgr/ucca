@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import glob
 import os
 import sys
 
@@ -12,7 +13,7 @@ and writes as CoNLL-X or SDP format.
 """
 
 
-def convert_passage(filename, converter=convert.to_conll, test=False, sentences=False):
+def convert_passage(filename, converter, test=False, sentences=False):
     """Opens a passage file and returns a string after conversion
     :param filename: input passage file
     :param converter: function to use for conversion
@@ -20,7 +21,8 @@ def convert_passage(filename, converter=convert.to_conll, test=False, sentences=
     :param sentences: whether to split to sentences before conversion
     """
     passage = file2passage(filename)
-    output = converter(passage, test, sentences)
+    passages = convert.split2sentences(passage) if sentences else [passage]
+    output = "\n".join(converter(p, test) for p in passages)
     return output, passage.ID
 
 
@@ -35,17 +37,25 @@ def main():
     parser.add_argument("-p", "--prefix", default="ucca_passage",
                         help="output filename prefix")
     parser.add_argument("-t", "--test", action="store_true",
-                        help="omit prediction columns (head and deprel for conll)")
+                        help="omit prediction columns (head and deprel for conll; "
+                             "top, pred, frame, etc. for sdp)")
     parser.add_argument("-s", "--sentences", action="store_true",
                         help="split passages to sentences")
     args = parser.parse_args()
 
-    for filename in args.filenames:
-        output, passage_id = convert_passage(filename, test=args.test, sentences=args.sentences)
-        outfile = "%s%s%s%s.%s" % (args.outdir, os.path.sep, args.prefix, passage_id, args.format)
-        sys.stderr.write("Writing %s file '%s'...\n" % (args.format, outfile))
-        with open(outfile, "w") as f:
-            f.write(output + "\n")
+    if args.format == "conll":
+        converter = convert.to_conll
+    elif args.format == "sdp":
+        converter = convert.to_sdp
+
+    for pattern in args.filenames:
+        for filename in glob.glob(pattern):
+            output, passage_id = convert_passage(filename, converter,
+                                                 test=args.test, sentences=args.sentences)
+            outfile = "%s%s%s%s.%s" % (args.outdir, os.path.sep, args.prefix, passage_id, args.format)
+            sys.stderr.write("Writing '%s'...\n" % outfile)
+            with open(outfile, "w") as f:
+                f.write(output + "\n")
 
     sys.exit(0)
 
