@@ -27,13 +27,13 @@ class Config(object, metaclass=Singleton):
         argparser.add_argument("-L", "--log", default="parser.log", help="output log file")
         argparser.add_argument("-I", "--iterations", type=int, default=1,
                                help="number of training iterations")
-        argparser.add_argument("-b", "--binary", action="store_true", default=False,
+        argparser.add_argument("-b", "--binary", action="store_true",
                                help="read and write passages in Pickle binary format, not XML")
-        argparser.add_argument("-v", "--verbose", action="store_true", default=False,
+        argparser.add_argument("-v", "--verbose", action="store_true",
                                help="display detailed information while parsing")
-        argparser.add_argument("-s", "--sentences", action="store_true", default=False,
+        argparser.add_argument("-s", "--sentences", action="store_true",
                                help="separate passages to sentences and parse each one separately")
-        argparser.add_argument("-a", "--paragraphs", action="store_true", default=False,
+        argparser.add_argument("-a", "--paragraphs", action="store_true",
                                help="separate passages to paragraphs and parse each one separately")
         argparser.add_argument("-r", "--learningrate", type=float, default=1.0,
                                help="learning rate for the model weight updates")
@@ -41,19 +41,19 @@ class Config(object, metaclass=Singleton):
                                help="learning rate factor at swap transitions")
         argparser.add_argument("-u", "--minupdate", type=int, default=5,
                                help="minimum updates a feature must have before being used")
-        argparser.add_argument("-l", "--checkloops", action="store_true", default=False,
+        argparser.add_argument("-l", "--checkloops", action="store_true",
                                help="check for infinite loops")
-        argparser.add_argument("-V", "--verify", action="store_true", default=False,
+        argparser.add_argument("-V", "--verify", action="store_true",
                                help="verify oracle successfully reproduces the passage")
-        argparser.add_argument("-c", "--compoundswap", action="store_true", default=False,
+        argparser.add_argument("-c", "--compoundswap", action="store_true",
                                help="enable compound swap")
         argparser.add_argument("-S", "--maxswap", type=int, default=11,
                                help="maximum distance for compound swap")
         argparser.add_argument("-N", "--maxnodes", type=float, default=3.0,
                                help="maximum ratio between non-terminal to terminal nodes")
-        argparser.add_argument("-M", "--multiedge", action="store_true", default=False,
+        argparser.add_argument("-M", "--multiedge", action="store_true",
                                help="allow multiple edges between the same nodes (with different tags)")
-        argparser.add_argument("-n", "--nolinkage", action="store_true", default=False,
+        argparser.add_argument("-n", "--nolinkage", action="store_true",
                                help="ignore linkage nodes and edges during both train and test")
         self.args = argparser.parse_args()
 

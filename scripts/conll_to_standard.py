@@ -4,42 +4,50 @@ import os
 import re
 import sys
 
-import ucca.convert
+from ucca import convert
 from ucca.ioutil import passage2file
 
-desc = """Parses files in CoNLL-X format, and writes as XML in UCCA standard format, or as binary.
+desc = """Parses files in CoNLL-X or SDP format,
+and writes UCCA standard format, as XML or binary pickle.
 Each passage is written to the file:
 <outdir>/<prefix><passage_id>.<extension>
 """
 
 
-def conll2passage(filename, passage_id):
-    """Opens a CONLL file and returns its parsed Passage objects"""
+def convert_file(filename, passage_id, converter=convert.from_conll):
+    """Opens a text file and returns its parsed Passage objects after conversion
+    :param filename: input file
+    :param passage_id: required for created passages (not specified in file)
+    :param converter: function to use for conversion
+    """
     with open(filename) as f:
-        return ucca.convert.from_conll(f, passage_id)
+        return converter(f, passage_id)
 
 
 def main():
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('filenames', nargs='+', help="CoNLL file names to convert")
-    parser.add_argument('-o', '--outdir', default='.', help="output directory")
-    parser.add_argument('-p', '--prefix', default='ucca_passage', help="output filename prefix")
-    parser.add_argument('-b', '--binary', dest='binary', action='store_true',
-                        help="write in pickle binary format (.bin)")
-    parser.add_argument('-x', '--xml', dest='binary', action='store_false',
-                        help="(default) write in standard XML format (.xml)")
+    parser.add_argument("filenames", nargs="+",
+                        help="CoNLL file names to convert")
+    parser.add_argument("-f", "--format", choices=("conll", "sdp"), default="conll",
+                        help="input file format")
+    parser.add_argument("-o", "--outdir", default=".",
+                        help="output directory")
+    parser.add_argument("-p", "--prefix", default="ucca_passage",
+                        help="output filename prefix")
+    parser.add_argument("-b", "--binary", action="store_true",
+                        help="write in pickle binary format (.pickle)")
     args = parser.parse_args()
 
     for filename in args.filenames:
         try:
-            passage_id = re.search(r'\d+', os.path.basename(filename)).group(0)
+            passage_id = re.search(r"\d+", os.path.basename(filename)).group(0)
         except AttributeError:
             sys.stderr.write("Error: cannot find passage ID in '%s'\n" % filename)
             continue
-        passage = conll2passage(filename, passage_id)
+        passage = convert_file(filename, passage_id)
 
         outfile = "%s/%s%s.%s" % (args.outdir, args.prefix, passage.ID,
-                                  'pickle' if args.binary else 'xml')
+                                  "pickle" if args.binary else "xml")
         sys.stderr.write("Writing passage '%s'...\n" % outfile)
         passage2file(passage, outfile, args.binary)
 
