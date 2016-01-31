@@ -320,6 +320,8 @@ class FoundationalNode(core.Node):
                 terms.append(edge.child)
             elif edge.tag == EdgeTags.Punctuation:
                 terms.extend(edge.child.terminals)
+            elif edge.child.layer.ID == layer0.LAYER_ID:
+                raise ValueError("Terminal with incoming %s edge" % edge.tag)
             else:
                 terms.extend(edge.child.get_terminals(punct, remotes))
         terms.sort(key=operator.attrgetter('position'))
