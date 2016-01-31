@@ -320,12 +320,13 @@ def read_passages(files):
             yield (passage, i)
 
 
-def read_files_and_dirs(files):
+def read_files_and_dirs(files_and_dirs):
     """
-    :param files: iterable of files and/or directories to look in
+    :param files_and_dirs: iterable of files and/or directories to look in
     :return: generator of passages from all files given,
              plus any files directly under any directory given
     """
+    files = list(files_and_dirs)
     files += [os.path.join(d, f) for d in files if os.path.isdir(d) for f in os.listdir(d)]
     files = [f for f in files if not os.path.isdir(f)]
     return read_passages(files) if files else ()

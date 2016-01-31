@@ -1,29 +1,57 @@
-import sys
+import os
+from _operator import attrgetter
 
 import numpy as np
 
 import parser
 from config import Config
 
+
+class Hyperparams(object):
+    def __init__(self, learning_rate):
+        self.learning_rate = learning_rate
+        self.score = -float("inf")
+
+    def run(self):
+        assert Config().args.train and Config().args.passages or Config().args.folds, \
+            "insufficient parameters given to parser"
+        print("Running with %s" % self)
+        Config().learning_rate = self.learning_rate
+        self.score = parser.main()
+        assert self.score is not None, "parser failed to produce score"
+
+    def __str__(self):
+        ret = "learning rate: %.3f" % self.learning_rate
+        if self.score > -float("inf"):
+            ret += ", score: %.3f" % self.score
+        return ret
+
+    def print(self, file):
+        print(", ".join("%.3f" % p for p in [self.learning_rate, self.score]), file=file)
+
+    @staticmethod
+    def print_title(file):
+        print("learning rate, score", file=file)
+
+
+def main():
+    out_file = os.environ.get("HYPERPARAMS_FILE", "hyperparams.csv")
+    num = int(os.environ.get("HYPERPARAMS_NUM", 30))
+    hyperparams = list(set(
+        Hyperparams(learning_rate) for learning_rate in
+        np.round(0.001 + np.random.exponential(0.8, num + 1), 3)))
+    print("\n".join(["All hyperparam combinations to try: "] +
+                    [str(h) for h in hyperparams]))
+    print("Saving results to '%s'" % out_file)
+    with open(out_file, "w") as f:
+        Hyperparams.print_title(f)
+    for hyperparam in hyperparams:
+        hyperparam.run()
+        with open(out_file, "a") as f:
+            hyperparam.print(f)
+        best = max(hyperparams, key=attrgetter("score"))
+        print("Best hyperparams: %s" % best)
+
+
 if __name__ == "__main__":
-    out_file = sys.argv.pop(1)
-    n = int(sys.argv.pop(1))
-    learning_rates = list(set(np.round(0.001 + np.random.exponential(0.8, n), 3)))
-    print("All learning rates to try: " + ",".join(
-            "%.3f" % learning_rate for learning_rate in sorted(learning_rates)))
-    scores = []
-    for learning_rate in learning_rates:
-        print("Running with learning rate of %.3f" % learning_rate)
-        Config().learning_rate = learning_rate
-        score = None
-        while score is None:
-            # noinspection PyBroadException
-            try:
-                score = parser.main()
-            except Exception as e:
-                print(e)
-        scores.append(score)
-        best = np.argmax(scores)
-        print("Best learning rate: %f (F1=%f)" % (learning_rates[best], scores[best]))
-        with open(out_file, mode="a") as f:
-            print([learning_rate, score], sep=",", file=f)
+    main()
