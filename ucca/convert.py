@@ -1134,9 +1134,9 @@ def split_sublists(sublists, sep):
     for sublist in sublists:
         for is_end, subsublist in groupby(sublist, key=lambda token: token in sep):
             if is_end:
-                ret[-1] += subsublist
+                ret[-1][0] += subsublist
             else:
-                ret.append(list(subsublist))
+                ret.append([list(subsublist)])
     return ret
 
 

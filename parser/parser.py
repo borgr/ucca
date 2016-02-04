@@ -242,7 +242,8 @@ class Parser(object):
         except StopIteration as e:
             raise ParserException("No valid actions available\n" +
                                   ("True actions: %s" % true_actions if true_actions
-                                   else self.oracle.log)) from e
+                                   else self.oracle.log if self.oracle is not None
+                                   else "")) from e
 
     @staticmethod
     def select_action(i, true_actions):
