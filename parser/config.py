@@ -13,11 +13,11 @@ class Singleton(type):
 class Config(object, metaclass=Singleton):
     def __init__(self):
         argparser = argparse.ArgumentParser(description="""Transition-based parser for UCCA.""")
-        argparser.add_argument("passages", nargs="*", default=[],
+        argparser.add_argument("passages", nargs="*", default=(),
                                help="passage files/directories to test on/parse")
-        argparser.add_argument("-t", "--train", nargs="+", default=[],
+        argparser.add_argument("-t", "--train", nargs="+", default=(),
                                help="passage files/directories to train on")
-        argparser.add_argument("-d", "--dev", nargs="+", default=[],
+        argparser.add_argument("-d", "--dev", nargs="+", default=(),
                                help="passage files/directories to tune on")
         argparser.add_argument("-f", "--folds", type=int, choices=range(2, 11), default=None,
                                help="number of folds for k-fold cross validation")

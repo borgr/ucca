@@ -153,7 +153,7 @@ class CoreTests(unittest.TestCase):
         # we don't need such a complex passage, but it will work anyway
         p1 = TestUtil.create_passage()
 
-        p2 = p1.copy([])
+        p2 = p1.copy(())
         self.assertEqual(p1.ID, p2.ID)
         self.assertTrue(p1.attrib.equals(p2.attrib))
         self.assertEqual(p1.extra, p2.extra)
@@ -170,9 +170,9 @@ class CoreTests(unittest.TestCase):
         node22, node21 = l2.all
 
         self.assertSequenceEqual(list(node11.iter()), [node11])
-        self.assertSequenceEqual(list(node11.iter(obj='edges')), [])
+        self.assertSequenceEqual(list(node11.iter(obj='edges')), ())
         self.assertSequenceEqual(list(node13.iter(key=lambda x: x.tag != '3')),
-                                 [])
+                                 ())
         self.assertSequenceEqual(list(node12.iter()), [node12, node13, node11])
         self.assertSequenceEqual(list(x.ID for x in node12.iter(obj='edges')),
                                  ['1.2->1.3', '1.2->1.1'])
@@ -401,11 +401,11 @@ class Layer1Tests(unittest.TestCase):
         self.assertSequenceEqual(ps2.get_sequences(), [(11, 14), (18, 20)])
         self.assertSequenceEqual(p2.get_sequences(), [(11, 14)])
         self.assertSequenceEqual(a2.get_sequences(), [(18, 20)])
-        self.assertSequenceEqual(d2.get_sequences(), [])
-        self.assertSequenceEqual(g2.get_sequences(), [])
+        self.assertSequenceEqual(d2.get_sequences(), ())
+        self.assertSequenceEqual(g2.get_sequences(), ())
         self.assertSequenceEqual(ps3.get_sequences(), [(15, 17)])
         self.assertSequenceEqual(a3.get_sequences(), [(16, 17)])
-        self.assertSequenceEqual(p3.get_sequences(), [])
+        self.assertSequenceEqual(p3.get_sequences(), ())
 
 
 class ConversionTests(unittest.TestCase):

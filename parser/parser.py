@@ -219,7 +219,7 @@ class Parser(object):
         """
         h = hash(self.state)
         assert h not in history, "\n".join(["Transition loop", self.state.str("\n")] +
-                                           [self.oracle.str("\n")] if train else [])
+                                           [self.oracle.str("\n")] if train else ())
         history.add(h)
 
     def predict_action(self, features, true_actions=None):

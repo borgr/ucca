@@ -122,7 +122,7 @@ class PunctNode(core.Node):
             a list of :class:layer0.Terminal objects
 
         """
-        return self.children if punct else []
+        return self.children if punct else ()
 
     @property
     def start_position(self):
