@@ -49,11 +49,11 @@ def main():
 
     for pattern in args.filenames:
         for filename in glob.glob(pattern):
+            basename = os.path.basename(filename)
             try:
-                passage_id = re.search(r"\d+", os.path.basename(filename)).group(0)
+                passage_id = re.search(r"\d+", basename).group(0)
             except AttributeError:
-                sys.stderr.write("Error: cannot find passage ID in '%s'\n" % filename)
-                continue
+                passage_id = basename
             passage = convert_file(filename, passage_id, converter)
 
             outfile = "%s/%s%s.%s" % (args.outdir, args.prefix, passage.ID,
