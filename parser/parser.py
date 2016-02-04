@@ -195,7 +195,10 @@ class Parser(object):
                 self.model.update(features, predicted_action.id, best_true_action_id, rate)
                 action = random.choice(true_actions)
             self.action_count += 1
-            self.state.transition(action)
+            try:
+                self.state.transition(action)
+            except AssertionError as e:
+                raise ParserException("Invalid transition: %s" % action) from e
             if Config().verbose:
                 if self.oracle is None:
                     print("  action: %-15s %s" % (action, self.state))
