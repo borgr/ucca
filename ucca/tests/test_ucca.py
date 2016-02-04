@@ -640,9 +640,9 @@ class UtilTests(unittest.TestCase):
     def test_split_paragraphs2sentences(self):
         paragraphs = [["This", "is", "one", "sentence", ".", "This", "is", "another"],
                       ["And", "this", "is", "the", "second", "paragraph", "."]]
-        sentences = [["This", "is", "one", "sentence", "."],
-                     ["This", "is", "another"],
-                     ["And", "this", "is", "the", "second", "paragraph", "."]]
+        sentences = [[["This", "is", "one", "sentence", "."]],
+                     [["This", "is", "another"]],
+                     [["And", "this", "is", "the", "second", "paragraph", "."]]]
         self.assertSequenceEqual(convert.split2sentences(paragraphs), sentences)
 
     def test_split_join_sentences(self):
