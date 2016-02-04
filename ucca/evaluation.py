@@ -80,9 +80,11 @@ def to_text(p, terminal_indices):
     :param terminal_indices: indices of terminals to extract the text of
     """
     l = sorted(list(terminal_indices))
+    if not l:
+        return ""
     words = get_text(p, l)
-    pre_context = get_text(p, range(min(l) - 3, min(l)))
-    post_context = get_text(p, range(max(l) + 1, max(l) + 3))
+    pre_context = get_text(p, range(l[0] - 3, l[0]))
+    post_context = get_text(p, range(l[-1] + 1, l[-1] + 3))
     return ' '.join(pre_context) + ' { ' + ' '.join(words) + ' } ' + ' '.join(post_context)
 
 
@@ -129,16 +131,18 @@ def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=
                         mutual_ys.add(y)
                     else:
                         error_counter[(str(tags1), str(tags2))] += 1
-                        if verbose:
-                            if tagged_as(tags1, tags2, {EdgeTags.Elaborator}, {EdgeTags.Center}):
-                                print(EdgeTags.Center + '-' + EdgeTags.Elaborator, to_text(passage1, y))
-                            elif tagged_as(tags1, tags2, {EdgeTags.Process, EdgeTags.State}, {EdgeTags.Center}):
-                                print(EdgeTags.Process + '|' + EdgeTags.State + '-' + EdgeTags.Center,
-                                      to_text(passage1, y))
-                            elif tagged_as(tags1, tags2, {EdgeTags.Participant}, {EdgeTags.Elaborator}):
-                                print(EdgeTags.Participant +'-' + EdgeTags.Elaborator, to_text(passage1, y))
-                            elif tagged_as(tags1, tags2, {EdgeTags.Adverbial}, {EdgeTags.Elaborator}):
-                                print(EdgeTags.Adverbial +'-' + EdgeTags.Elaborator, to_text(passage1, y))
+                        if not verbose:
+                            pass
+                        elif EdgeTags.Elaborator in tags1 and EdgeTags.Center in tags2 or (
+                             EdgeTags.Center in tags1 and EdgeTags.Elaborator in tags2):
+                            print(EdgeTags.Center + '-' + EdgeTags.Elaborator, to_text(passage1, y))
+                        elif EdgeTags.Process in tags1 and EdgeTags.Center in tags2 or (
+                             EdgeTags.Center in tags1 and {EdgeTags.Process, EdgeTags.State} & tags2):
+                            print(EdgeTags.Process + '|' + EdgeTags.State + '-' + EdgeTags.Center,
+                                  to_text(passage1, y))
+                        elif EdgeTags.Participant in tags1 and EdgeTags.Elaborator in tags2 or (
+                             EdgeTags.Elaborator in tags1 and EdgeTags.Participant in tags2):
+                            print(EdgeTags.Participant + '-' + EdgeTags.Elaborator, to_text(passage1, y))
         return mutual_ys, error_counter
 
     map2, map2_remotes = create_passage_yields(passage2, not separate_remotes)
@@ -150,7 +154,7 @@ def mutual_yields(passage1, passage2, eval_type, separate_remotes=True, verbose=
     output_remotes = None
     if separate_remotes:
         output_remotes, _ = _find_mutuals(map1_remotes, map2_remotes)
-    
+
     return (output, set(map1.keys()), set(map2.keys()),
             output_remotes, set(map1_remotes.keys()), set(map2_remotes.keys()),
             errors)
@@ -185,7 +189,7 @@ def create_passage_yields(p, remote_terminals=False):
                                                       EdgeTags.LinkArgument,
                                                       EdgeTags.LinkRelation,
                                                       EdgeTags.Terminal))
-   
+
     table_reg, table_remote = dict(), dict()
     for e in edges:
         pos = frozenset(t.position for t in e.child.get_terminals(punct=False, remotes=remote_terminals)
@@ -283,7 +287,7 @@ def get_scores(p1, p2, eval_type, units, fscore, errors, verbose=True):
     if verbose:
         print("\nEvaluation type: (" + eval_type + ")")
     res = None
-    
+
     if verbose and units and p1 is not None:
         print("==> Mutual Units:")
         for y in mutual:
