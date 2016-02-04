@@ -30,7 +30,7 @@ def main():
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("filenames", nargs="+",
                         help="passage file names to convert")
-    parser.add_argument("-f", "--format", choices=("conll", "sdp"), default="conll",
+    parser.add_argument("-f", "--format", choices=("conll", "sdp", "txt"), default="conll",
                         help="output file format")
     parser.add_argument("-o", "--outdir", default=".",
                         help="output directory")
@@ -47,6 +47,8 @@ def main():
         converter = convert.to_conll
     elif args.format == "sdp":
         converter = convert.to_sdp
+    elif args.format == "txt":
+        converter = convert.to_text
 
     for pattern in args.filenames:
         for filename in glob.glob(pattern):
