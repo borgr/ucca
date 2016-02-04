@@ -12,6 +12,8 @@ class Action(object):
     RIGHT = 0
     LEFT = 1
 
+    MAX_SWAP = 15  # default maximum size for compound swap
+
     def __init__(self, action_type, tag=None, orig_edge=None, orig_node=None, oracle=None):
         self.type = action_type  # String
         self.tag = tag  # Usually the tag of the created edge; but if COMPOUND_SWAP, the distance
@@ -68,10 +70,19 @@ class Action(object):
         return self.is_type(Actions.LeftRemote, Actions.RightRemote)
 
     @property
+    def is_swap(self):
+        return self.is_type(Actions.Swap)
+
+    @property
     def id(self):
         if self._id is None:
             Action.get_all_actions()
-            self._id = Action.all_action_ids[(self.type_id, self.tag)]
+            key = (self.type_id, self.tag)
+            self._id = Action.all_action_ids.get(key)
+            if self._id is None:  # Unseen action tag
+                self._id = len(Action.all_actions)
+                Action.all_actions.append(self)
+                Action.all_action_ids[key] = self._id
         return self._id
 
     @classmethod
@@ -86,12 +97,10 @@ class Action(object):
                                (not Config().no_linkage or tag not in (
                                    EdgeTags.LinkRelation, EdgeTags.LinkArgument))] + \
                               [Actions.Reduce, Actions.Shift, Actions.Finish]
-            cls.swap_start = len(cls.all_actions)
             if Config().compound_swap:
-                cls.all_actions.extend(Actions.Swap(i) for i in range(1, Config().max_swap + 1))
+                cls.all_actions += [Actions.Swap(i) for i in range(1, cls.MAX_SWAP)]
             else:
                 cls.all_actions.append(Actions.Swap)
-            cls.swap_end = len(cls.all_actions)
             cls.all_action_ids = {(action.type_id, action.tag): i
                                   for i, action in enumerate(cls.all_actions)}
         return cls.all_actions
@@ -99,11 +108,6 @@ class Action(object):
     @classmethod
     def by_id(cls, i):
         return cls.get_all_actions()[i]
-
-    @classmethod
-    def is_swap_id(cls, i):
-        cls.get_all_actions()
-        return cls.swap_start <= i < cls.swap_end
 
 
 class Actions:

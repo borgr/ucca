@@ -190,7 +190,7 @@ class Parser(object):
                                           key=self.scores.get) if len(true_actions) > 1 \
                     else true_actions[0].id
                 rate = Config().learning_rate
-                if Action.is_swap_id(best_true_action_id):
+                if Action.by_id(best_true_action_id).is_swap:
                     rate *= Config().importance
                 self.model.update(features, predicted_action.id, best_true_action_id, rate)
                 action = random.choice(true_actions)
