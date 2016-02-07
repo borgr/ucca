@@ -518,12 +518,11 @@ def to_site(passage):
             break
 
     # Handling remotes, implicits and linkages
-    for remote in [edge for node in passage.layer(layer1.LAYER_ID).all
-                   for edge in node
-                   if edge.attrib.get('remote')]:
+    for remote in [e for n in passage.layer(layer1.LAYER_ID).all
+                   for e in n if e.attrib.get('remote')]:
         _remote(remote)
-    for implicit in [node for node in passage.layer(layer1.LAYER_ID).all
-                     if node.attrib.get('implicit')]:
+    for implicit in [n for n in passage.layer(layer1.LAYER_ID).all
+                     if n.attrib.get('implicit')]:
         _implicit(implicit)
     for linkage in filter(lambda x: x.tag == layer1.NodeTags.Linkage,
                           passage.layer(layer1.LAYER_ID).heads):
@@ -749,310 +748,382 @@ def to_sequence(passage):
         seq += ' '
 
 
-ROOT = "ROOT"
+class DependencyConverter(object):
+    
+    ROOT = "ROOT"
 
+    class Node:
+        def __init__(self, incoming=None, terminal=None):
+            self.incoming = list(incoming) if incoming is not None else []
+            for edge in self.incoming:
+                edge.dependent = self
+            self.outgoing = []
+            self.terminal = terminal
+            self.node = None
+            self.level = None
+            self.preterminal = None
+    
+        def __repr__(self):
+            return self.terminal.text if self.terminal else DependencyConverter.ROOT
+    
+    class Edge:
+        def __init__(self, head_index, rel, remote):
+            self.head_index = head_index
+            self.rel = rel
+            self.remote = remote
+            self.head = None
+            self.dependent = None
+    
+        def link_head(self, heads):
+            self.head = heads[self.head_index]
+            self.head.outgoing.append(self)
+    
+        def remove(self):
+            self.head.outgoing.remove(self)
+            self.head = None
+            self.dependent.incoming.remove(self)
+            self.dependent = None
+    
+        def __repr__(self):
+            return (str(self.head_index) if self.head is None else repr(self.head)) + \
+                   "-[" + self.rel + ("*" if self.remote else "") + "]->" + \
+                   repr(self.dependent)
 
-class DependencyNode:
-    def __init__(self, head_indices=None, rels=None, remotes=None, terminal=None):
-        self.head_indices = list(head_indices) if head_indices else []
-        self.rels = list(rels) if rels else []
-        self.remotes = list(remotes) if remotes else []
-        self.terminal = terminal
-        self.heads = None
-        self.children = []
-        self.node = None
-        self.level = None
-        self.preterminal = None
+    @staticmethod
+    def read(it, l0, paragraph):
+        pass
 
-    def __repr__(self):
-        return self.terminal.text if self.terminal else ROOT
+    @staticmethod
+    def generate(dep_nodes, test):
+        pass
 
-
-def read_conll(it, l0, paragraph):
-    # id, form, lemma, coarse pos, fine pos, features, head, relation
-    dep_nodes = [DependencyNode()]  # dummy root
-    for line_number, line in enumerate(it):
-        fields = line.split()
-        if not fields:
-            break
-        position, text, _, tag, _, _, head_position, rel = fields[:8]
-        if line_number + 1 != int(position):
-            raise Exception("line number and position do not match: %d != %s" %
-                            (line_number + 1, position))
-        punctuation = (tag == layer0.NodeTags.Punct)
-        terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
-        dep_nodes.append(DependencyNode([int(head_position)], [rel], remotes=[False],
-                                        terminal=terminal))
-
-    return (dep_nodes, dep_nodes) if len(dep_nodes) > 1 else (False, False)
-
-
-def read_sdp(it, l0, paragraph):
-    # id, form, lemma, pos, top, pred, frame, arg1, arg2, ...
-    dep_nodes = [DependencyNode()]  # dummy root
-    preds = list(dep_nodes)
-    for line_number, line in enumerate(it):
-        fields = line.split()
-        if not fields:
-            break
-        position, text, _, tag, _, pred, _ = fields[:7]
-        # (head positions, dependency relations, is remote for each one)
-        heads = [(i + 1, rel.rstrip("*"), rel.endswith("*"))
-                 for i, rel in enumerate(fields[7:]) if rel != "_"]
-        if not heads:
-            heads = [(0, ROOT, False)]
-        heads = zip(*heads)
-        if line_number + 1 != int(position):
-            raise Exception("line number and position do not match: %d != %s" %
-                            (line_number + 1, position))
-        punctuation = (tag == layer0.NodeTags.Punct)
-        terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
-        node = DependencyNode(*heads, terminal=terminal)
-        dep_nodes.append(node)
-        if pred == "+":
-            preds.append(node)
-
-    return (dep_nodes, preds) if len(dep_nodes) > 1 else (False, False)
-
-
-def from_dependency(lines, passage_id, reader=read_conll):
-    """Converts from parsed text in dependency format to a Passage object.
-
-    :param lines: an iterable of lines in dependency format, describing a single passage.
-    :param passage_id: ID to set for passage
-    :param reader: either read_sdp or read_conll, the function to read this dependency format
-
-    :return a Passage object.
-    """
-
-    def _topological_sort(nodes):
-        # sort into topological ordering to create parents before children
-        levels = defaultdict(set)   # levels start from 0 (root)
-        remaining = [node for node in nodes if not node.children]  # leaves
-        while remaining:
-            node = remaining.pop()
-            if node.level is not None:  # done already
-                continue
-            if node.heads:
-                remaining_heads = {h for h in node.heads if h.level is None}
-                if remaining_heads:  # need to process heads first
-                    intersection = remaining_heads.intersection(remaining)
-                    assert not intersection, \
-                        "Cycle detected: '%s' and %s" % (node, intersection)
-                    remaining += [node] + list(remaining_heads)
-                    continue
-                node.level = 1 + max(h.level for h in node.heads)  # done with heads
-            else:  # root
-                node.level = 0
-            levels[node.level].add(node)
-
-        return [node for level, level_nodes in sorted(levels.items())
-                if level > 0  # omit dummy root
-                for node in sorted(level_nodes, key=lambda x: x.terminal.position)]
-
-    def _label_edge(node):
-        child_rels = [child_rel for _, child_rel in node.children]
-        if layer0.is_punct(node.terminal):
-            return EdgeTags.Punctuation
-        elif EdgeTags.ParallelScene in child_rels:
-            return EdgeTags.ParallelScene
-        elif EdgeTags.Participant in child_rels:
-            return EdgeTags.Process
-        else:
-            return EdgeTags.Center
-
-    p = core.Passage(passage_id)
-    l0 = layer0.Layer0(p)
-    l1 = layer1.Layer1(p)
-    paragraph = 1
-
-    # read dependencies and terminals from lines and create nodes based upon them
-    line_iterator = iter(lines)
-    while True:
-        dep_nodes, preds = reader(line_iterator, l0, paragraph)
-        if not dep_nodes:
-            break
-        paragraph += 1
-        for dep_node in dep_nodes[1:]:
-            dep_node.heads = [preds[i] for i in dep_node.head_indices]
-            for head, rel in zip(dep_node.heads, dep_node.rels):
-                head.children.append((dep_node, rel))
-        # create nodes starting from the root and going down to pre-terminals
-        linkages = defaultdict(list)
-        dep_nodes = _topological_sort(dep_nodes)
+    @staticmethod
+    def link_heads(dep_nodes, heads):
         for dep_node in dep_nodes:
-            if dep_node.rels == [EdgeTags.Terminal]:  # part of non-analyzable expression
-                head = dep_node.heads[0]
-                if layer0.is_punct(head.terminal) and head.heads and head.heads[0].heads:
-                    head = head.head  # do not put terminals and punctuation together
-                assert head.preterminal is not None, "Node '%s' has no preterminal" % head
-                dep_node.preterminal = head.preterminal  # only edges to layer 0 can be Terminal
-            elif dep_node.rels == [ROOT]:
-                # keep dep_node.node as None so that children are attached to the root
-                dep_node.preterminal = l1.add_fnode(None, _label_edge(dep_node))
+            for edge in dep_node.incoming:
+                edge.link_head(heads)
+
+    @staticmethod
+    def omit_edge(edge):
+        return False
+
+    @classmethod
+    def from_dependency(cls, lines, passage_id):
+        """Converts from parsed text in dependency format to a Passage object.
+
+        :param lines: an iterable of lines in dependency format, describing a single passage.
+        :param passage_id: ID to set for passage
+
+        :return a Passage object.
+        """
+
+        def _topological_sort(nodes):
+            # sort into topological ordering to create parents before children
+            levels = defaultdict(set)   # levels start from 0 (root)
+            remaining = [n for n in nodes if not n.outgoing]  # leaves
+            while remaining:
+                node = remaining.pop()
+                if node.level is not None:  # done already
+                    continue
+                if node.incoming:
+                    remaining_heads = {e.head for e in node.incoming if e.head.level is None}
+                    if remaining_heads:  # need to process heads first
+                        remaining += [node] + list(remaining_heads)
+                        continue
+                    node.level = 1 + max(e.head.level for e in node.incoming)  # done with heads
+                else:  # root
+                    node.level = 0
+                levels[node.level].add(node)
+
+            return [n for level, level_nodes in sorted(levels.items())
+                    if level > 0  # omit dummy root
+                    for n in sorted(level_nodes, key=lambda x: x.terminal.position)]
+
+        def _label_edge(node):
+            dependent_rels = {e.rel for e in node.outgoing}
+            if layer0.is_punct(node.terminal):
+                return EdgeTags.Punctuation
+            elif EdgeTags.ParallelScene in dependent_rels:
+                return EdgeTags.ParallelScene
+            elif EdgeTags.Participant in dependent_rels:
+                return EdgeTags.Process
             else:
-                remotes = []
-                for head, rel, remote in zip(dep_node.heads, dep_node.rels, dep_node.remotes):
-                    if rel == EdgeTags.LinkArgument:
-                        linkages[head.node].append(dep_node.node)
-                    elif remote:
-                        remotes.append((head, rel))
-                    else:
-                        if dep_node.node is not None:
-                            print("More than one non-remote non-linkage parent for '%s': %s"
-                                  % (dep_node.node, dep_node.heads), file=sys.stderr)
-                        dep_node.node = l1.add_fnode(head.node, rel)
-                        dep_node.preterminal = \
-                            l1.add_fnode(dep_node.node, _label_edge(dep_node)) \
-                            if dep_node.children else dep_node.node
-                for head, rel in remotes:
-                    if head.node is None:  # add intermediate parent node
-                        head.node = head.preterminal
-                        head.preterminal = l1.add_fnode(head.node, _label_edge(head))
-                    l1.add_remote(head.node, rel, dep_node.node)
+                return EdgeTags.Center
+
+        p = core.Passage(passage_id)
+        l0 = layer0.Layer0(p)
+        l1 = layer1.Layer1(p)
+        paragraph = 1
+
+        # read dependencies and terminals from lines and create nodes based upon them
+        line_iterator = iter(lines)
+        while True:
+            dep_nodes, preds = cls.read(line_iterator, l0, paragraph)
+            if not dep_nodes:
+                break
+            paragraph += 1
+            cls.link_heads(dep_nodes[1:], preds)
+            # create nodes starting from the root and going down to pre-terminals
+            linkages = defaultdict(list)
+            dep_nodes = _topological_sort(dep_nodes)
+            for dep_node in dep_nodes:
+                incoming_rels = {e.rel for e in dep_node.incoming}
+                if incoming_rels == {cls.ROOT}:
+                    # keep dep_node.node as None so that dependents are attached to the root
+                    dep_node.preterminal = l1.add_fnode(None, _label_edge(dep_node))
+                elif incoming_rels == {EdgeTags.Terminal}:  # part of non-analyzable expression
+                    head = dep_node.incoming[0].head
+                    if layer0.is_punct(head.terminal) and head.incoming and \
+                            head.incoming[0].head.incoming:
+                        head = head.head  # do not put terminals and punctuation together
+                    if head.preterminal is None:
+                        head.preterminal = l1.add_fnode(None, _label_edge(head))
+                    dep_node.preterminal = head.preterminal  # only edges to layer 0 can be Terminal
+                else:  # usual case
+                    remotes = []
+                    for edge in dep_node.incoming:
+                        if edge.rel == EdgeTags.LinkArgument:
+                            linkages[edge.head].append(dep_node)
+                        elif edge.remote and any(not e.remote for e in dep_node.incoming):
+                            remotes.append(edge)
+                        elif dep_node.node is None:
+                            dep_node.node = l1.add_fnode(edge.head.node, edge.rel)
+                            dep_node.preterminal = \
+                                l1.add_fnode(dep_node.node, _label_edge(dep_node)) \
+                                if dep_node.outgoing else dep_node.node
+                        else:
+                            print("More than one non-remote non-linkage head for '%s': %s"
+                                  % (dep_node.node, dep_node.incoming), file=sys.stderr)
+
+                    # link remote edges
+                    for edge in remotes:
+                        if edge.head.node is None:  # add intermediate parent node
+                            if edge.head.preterminal is None:
+                                edge.head.preterminal = l1.add_fnode(None, _label_edge(edge.head))
+                            edge.head.node = edge.head.preterminal
+                            edge.head.preterminal = l1.add_fnode(edge.head.node,
+                                                                 _label_edge(edge.head))
+                        l1.add_remote(edge.head.node, edge.rel, dep_node.node)
 
             # link linkage arguments to relations
             for link_relation, link_arguments in linkages.items():
-                l1.add_linkage(link_relation, *link_arguments)
+                args = []
+                for arg in link_arguments:
+                    if arg.node is None:  # add argument node
+                        arg.node = arg.preterminal = l1.add_fnode(None, _label_edge(arg))
+                    args.append(arg.node)
+                if link_relation.node is None:
+                    link_relation.node = link_relation.preterminal = l1.add_fnode(None, EdgeTags.Linker)
+                l1.add_linkage(link_relation.node, *args)
 
-            # link pre-terminal to terminal
-            dep_node.preterminal.add(EdgeTags.Terminal, dep_node.terminal)
-            if layer0.is_punct(dep_node.terminal):
-                dep_node.preterminal.tag = layer1.NodeTags.Punctuation
+            for dep_node in dep_nodes:
+                # link pre-terminal to terminal
+                dep_node.preterminal.add(EdgeTags.Terminal, dep_node.terminal)
+                if layer0.is_punct(dep_node.terminal):
+                    dep_node.preterminal.tag = layer1.NodeTags.Punctuation
 
-    return p
+        return p
 
+    @classmethod
+    def to_dependency(cls, passage, test=False):
+        """ Convert from a Passage object to a string in CoNLL-X format (conll)
 
-def generate_conll(dep_nodes, test):
-    # id, form, lemma, coarse pos, fine pos, features
-    for i, dep_node in enumerate(dep_nodes):
-        position = i + 1
-        tag = dep_node.terminal.tag
-        fields = [position, dep_node.terminal.text, "_", tag, tag, "_"]
-        if not test:
-            heads = [(head + 1, rel) for head, rel, remote in
-                     zip(dep_node.head_indices, dep_node.rels, dep_node.remotes)
-                     if rel not in (EdgeTags.LinkRelation, EdgeTags.LinkArgument) and
-                     not remote]
-            if not heads:
-                heads = [(0, ROOT)]
-            if len(heads) > 1:
-                print("More than one non-remote non-linkage parent for '%s': %s"
-                      % (dep_node.terminal, heads),
-                      file=sys.stderr)
-            fields += heads[0]   # head, dependency relation
-        fields += ["_", "_"]   # projective head, projective dependency relation (optional)
-        yield fields
-    yield []
+        :param passage: the Passage object to convert
+        :param test: whether to omit the head and deprel columns. Defaults to False
 
-
-def generate_sdp(dep_nodes, test):
-    # id, form, lemma, pos, top, pred, frame, arg1, arg2, ...
-    preds = sorted({head for dep_node in dep_nodes
-                    for head in dep_node.head_indices})
-    for dep_node in dep_nodes:
-        dep_node.heads = {head: rel + ("*" if remote else "") for head, rel, remote
-                          in zip(dep_node.head_indices, dep_node.rels, dep_node.remotes)
-                          if rel not in (EdgeTags.LinkRelation, EdgeTags.LinkArgument)}
-        # FIXME re-enable linkage relations after resolving cycles problem
-    for i, dep_node in enumerate(dep_nodes):
-        position = i + 1
-        tag = dep_node.terminal.tag
-        pred = "+" if i in preds else "-"
-        fields = [position, dep_node.terminal.text, "_", tag]
-        if not test:
-            fields += ["_", pred, "_"] + \
-                      [dep_node.heads.get(pred, "_") for pred in preds]  # rel for each pred
-        yield fields
-    yield []
-
-
-def to_dependency(passage, generator=generate_conll, test=False):
-    """ Convert from a Passage object to a string in CoNLL-X format (conll)
-
-    :param passage: the Passage object to convert
-    :param generator: function that generates lists of fields when given
-                      a list of DependencyNode objects and a 'test' flag
-    :param test: whether to omit the head and deprel columns. Defaults to False
-
-    :return a multi-line string representing the dependencies in the passage
-    """
-    _TAG_PRIORITY = [    # ordered list of edge labels for head selection
-        EdgeTags.Center,
-        EdgeTags.Connector,
-        EdgeTags.ParallelScene,
-        EdgeTags.Process,
-        EdgeTags.State,
-        EdgeTags.Participant,
-        EdgeTags.Adverbial,
-        EdgeTags.Time,
-        EdgeTags.Elaborator,
-        EdgeTags.Relator,
-        EdgeTags.Function,
-        EdgeTags.Linker,
-        EdgeTags.LinkRelation,
-        EdgeTags.LinkArgument,
-        EdgeTags.Ground,
-        EdgeTags.Terminal,
-        EdgeTags.Punctuation,
-    ]
-
-    def _find_head_child_edge(unit):
-        """ find the outgoing edge to the head child of this unit
-        :param unit: unit to find the edges from
-        :return the head outgoing edge
+        :return a multi-line string representing the dependencies in the passage
         """
-        try:
-            return next(edge for edge_tag in _TAG_PRIORITY  # head selection by priority
-                        for edge in unit.outgoing
-                        if edge.tag == edge_tag and
-                        not edge.child.attrib.get("implicit"))
-        except StopIteration as e:
-            raise Exception("Cannot find head child for node ID " + unit.ID) from e
+        _TAG_PRIORITY = [    # ordered list of edge labels for head selection
+            EdgeTags.Center,
+            EdgeTags.Connector,
+            EdgeTags.ParallelScene,
+            EdgeTags.Process,
+            EdgeTags.State,
+            EdgeTags.Participant,
+            EdgeTags.Adverbial,
+            EdgeTags.Time,
+            EdgeTags.Elaborator,
+            EdgeTags.Relator,
+            EdgeTags.Function,
+            EdgeTags.Linker,
+            EdgeTags.LinkRelation,
+            EdgeTags.LinkArgument,
+            EdgeTags.Ground,
+            EdgeTags.Terminal,
+            EdgeTags.Punctuation,
+        ]
 
-    def _find_head_terminal(unit):
-        """ find the head terminal of this unit, by recursive descent
-        :param unit: unit to find the terminal of
-        :return the unit itself if it is a terminal, otherwise recursively applied to child
-        """
-        while unit.layer.ID != layer0.LAYER_ID:
-            unit = _find_head_child_edge(unit).child
-        return unit
+        def _find_head_child_edge(unit):
+            """ find the outgoing edge to the head child of this unit
+            :param unit: unit to find the edges from
+            :return the head outgoing edge
+            """
+            try:
+                return next(e for tag in _TAG_PRIORITY  # head selection by priority
+                            for e in unit.outgoing
+                            if e.tag == tag and not e.child.attrib.get("implicit"))
+            except StopIteration as e:
+                raise Exception("Cannot find head child for node ID " + unit.ID) from e
 
-    def _find_top_headed_edges(unit):
-        """ find uppermost edges above here, from a head child to its parent
-        :param unit: unit to start from
-        :return generator of edges
-        """
-        # remaining = list(unit.incoming)
-        # ret = []
-        # while remaining:
-        #     edge = remaining.pop()
-        #     if edge is _find_head_child_edge(edge.parent):
-        #         remaining += edge.parent.incoming
-        #     else:
-        #         ret.append(edge)
-        # return ret
-        for edge in unit.incoming:
-            if edge == _find_head_child_edge(edge.parent):
-                yield from _find_top_headed_edges(edge.parent)
-            else:
-                yield edge
+        def _find_head_terminal(unit):
+            """ find the head terminal of this unit, by recursive descent
+            :param unit: unit to find the terminal of
+            :return the unit itself if it is a terminal, otherwise recursively applied to child
+            """
+            while unit.layer.ID != layer0.LAYER_ID:
+                unit = _find_head_child_edge(unit).child
+            return unit
 
-    lines = []  # list of output lines to return
-    terminals = passage.layer(layer0.LAYER_ID).all  # terminal units from the passage
-    dep_nodes = []
-    for terminal in sorted(terminals, key=operator.attrgetter("position")):
-        edges = list(_find_top_headed_edges(terminal))
-        head_indices = [_find_head_terminal(edge.parent).position - 1 for edge in edges]
-        # (head positions, dependency relations, is remote for each one)
-        heads = zip(*[(head_index, edge.tag, edge.attrib.get("remote"))
-                      for edge, head_index in zip(edges, head_indices)
-                      if head_index != terminal.position - 1])
-        dep_nodes.append(DependencyNode(*heads, terminal=terminal))
-    lines.append("\n".join("\t".join(str(field) for field in entry)
-                           for entry in generator(dep_nodes, test)))
-    return "\n".join(lines)
+        def _find_top_headed_edges(unit):
+            """ find uppermost edges above here, from a head child to its parent
+            :param unit: unit to start from
+            :return generator of edges
+            """
+            # remaining = list(unit.incoming)
+            # ret = []
+            # while remaining:
+            #     edge = remaining.pop()
+            #     if edge is _find_head_child_edge(edge.parent):
+            #         remaining += edge.parent.incoming
+            #     else:
+            #         ret.append(edge)
+            # return ret
+            for e in unit.incoming:
+                if e == _find_head_child_edge(e.parent):
+                    yield from _find_top_headed_edges(e.parent)
+                else:
+                    yield e
+
+        def _find_cycle(n, v, p):
+            if n in v:
+                return False
+            v.add(n)
+            p.add(n)
+            for e in n.incoming:
+                if e.head in p or _find_cycle(e.head, v, p):
+                    return True
+            p.remove(n)
+            return False
+
+        lines = []  # list of output lines to return
+        terminals = passage.layer(layer0.LAYER_ID).all  # terminal units from the passage
+        dep_nodes = []
+        for terminal in sorted(terminals, key=operator.attrgetter("position")):
+            edges = list(_find_top_headed_edges(terminal))
+            head_indices = [_find_head_terminal(e.parent).position - 1 for e in edges]
+            # (head positions, dependency relations, is remote for each one)
+            incoming = [cls.Edge(head_index, e.tag, e.attrib.get("remote", False))
+                        for e, head_index in zip(edges, head_indices)
+                        if head_index != terminal.position - 1 and  # avoid self loops
+                        not cls.omit_edge(e)]
+            dep_nodes.append(cls.Node(incoming, terminal))
+        cls.link_heads(dep_nodes, dep_nodes)
+
+        # find cycles and remove them
+        while True:
+            path = set()
+            visited = set()
+            if not any(_find_cycle(dep_node, visited, path) for dep_node in dep_nodes):
+                break
+            # remove edges from cycle in priority order: first remote edges, then linker edges
+            edge = min([e for dep_node in path for e in dep_node.incoming],
+                       key=lambda e: (not e.remote, e.rel != EdgeTags.Linker))
+            edge.remove()
+
+        lines.append("\n".join("\t".join(str(field) for field in entry)
+                               for entry in cls.generate(dep_nodes, test)))
+        return "\n".join(lines)
+
+
+class ConllConverter(DependencyConverter):
+
+    @staticmethod
+    def read(it, l0, paragraph):
+        # id, form, lemma, coarse pos, fine pos, features, head, relation
+        dep_nodes = [DependencyConverter.Node()]  # dummy root
+        for line_number, line in enumerate(it):
+            fields = line.split()
+            if not fields:
+                break
+            position, text, _, tag, _, _, head_position, rel = fields[:8]
+            if line_number + 1 != int(position):
+                raise Exception("line number and position do not match: %d != %s" %
+                                (line_number + 1, position))
+            punctuation = (tag == layer0.NodeTags.Punct)
+            terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
+            dep_nodes.append(DependencyConverter.Node(
+                [DependencyConverter.Edge(int(head_position), rel, False)], terminal))
+
+        return (dep_nodes, dep_nodes) if len(dep_nodes) > 1 else (False, False)
+
+    @staticmethod
+    def generate(dep_nodes, test):
+        # id, form, lemma, coarse pos, fine pos, features
+        for i, dep_node in enumerate(dep_nodes):
+            position = i + 1
+            tag = dep_node.terminal.tag
+            fields = [position, dep_node.terminal.text, "_", tag, tag, "_"]
+            if not test:
+                heads = [(e.head_index + 1, e.rel) for e in dep_node.incoming] or \
+                        [(0, DependencyConverter.ROOT)]
+                if len(heads) > 1:
+                    print("More than one non-remote non-linkage parent for '%s': %s"
+                          % (dep_node.terminal, heads), file=sys.stderr)
+                fields += heads[0]   # head, dependency relation
+            fields += ["_", "_"]   # projective head, projective dependency relation (optional)
+            yield fields
+        yield []
+
+    @staticmethod
+    def omit_edge(edge):
+        return edge.tag == EdgeTags.LinkArgument or edge.attrib.get("remote")
+
+
+class SdpConverter(DependencyConverter):
+
+    @staticmethod
+    def read(it, l0, paragraph):
+        # id, form, lemma, pos, top, pred, frame, arg1, arg2, ...
+        dep_nodes = [DependencyConverter.Node()]  # dummy root
+        preds = list(dep_nodes)
+        for line_number, line in enumerate(it):
+            fields = line.split()
+            if not fields:
+                break
+            position, text, _, tag, _, pred, _ = fields[:7]
+            # (head positions, dependency relations, is remote for each one)
+            incoming = [DependencyConverter.Edge(i + 1, rel.rstrip("*"), rel.endswith("*"))
+                        for i, rel in enumerate(fields[7:]) if rel != "_"] or \
+                       [DependencyConverter.Edge(0, DependencyConverter.ROOT, False)]
+            if line_number + 1 != int(position):
+                raise Exception("line number and position do not match: %d != %s" %
+                                (line_number + 1, position))
+            punctuation = (tag == layer0.NodeTags.Punct)
+            terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
+            node = DependencyConverter.Node(incoming, terminal)
+            dep_nodes.append(node)
+            if pred == "+":
+                preds.append(node)
+
+        return (dep_nodes, preds) if len(dep_nodes) > 1 else (False, False)
+
+    @staticmethod
+    def generate(dep_nodes, test):
+        # id, form, lemma, pos, top, pred, frame, arg1, arg2, ...
+        preds = sorted({e.head_index for dep_node in dep_nodes
+                        for e in dep_node.incoming})
+        for i, dep_node in enumerate(dep_nodes):
+            heads = {e.head_index: e.rel + ("*" if e.remote else "")
+                     for e in dep_node.incoming}
+            position = i + 1
+            tag = dep_node.terminal.tag
+            pred = "+" if i in preds else "-"
+            fields = [position, dep_node.terminal.text, "_", tag]
+            if not test:
+                fields += ["_", pred, "_"] + \
+                          [heads.get(pred, "_") for pred in preds]  # rel for each pred
+            yield fields
+        yield []
 
 
 def from_conll(lines, passage_id):
@@ -1063,7 +1134,7 @@ def from_conll(lines, passage_id):
 
     :return a Passage object.
     """
-    return from_dependency(lines, passage_id, read_conll)
+    return ConllConverter.from_dependency(lines, passage_id)
 
 
 def to_conll(passage, test=False):
@@ -1074,7 +1145,7 @@ def to_conll(passage, test=False):
 
     :return a multi-line string representing the dependencies in the passage
     """
-    return to_dependency(passage, generate_conll, test)
+    return ConllConverter.to_dependency(passage, test)
 
 
 def from_sdp(lines, passage_id):
@@ -1085,7 +1156,7 @@ def from_sdp(lines, passage_id):
 
     :return a Passage object.
     """
-    return from_dependency(lines, passage_id, read_sdp)
+    return SdpConverter.from_dependency(lines, passage_id)
 
 
 def to_sdp(passage, test=False):
@@ -1096,7 +1167,7 @@ def to_sdp(passage, test=False):
 
     :return a multi-line string representing the semantic dependencies in the passage
     """
-    return to_dependency(passage, generate_sdp, test)
+    return SdpConverter.to_dependency(passage, test)
 
 
 def split2sentences(passage, remarks=False):
@@ -1169,8 +1240,8 @@ def split_passage(passage, ends, remarks=False):
             nodes.add(terminal)
         while level:
             nodes.update(level)
-            level = set(edge.parent for node in level for edge in node.incoming
-                        if not edge.attrib.get("remote") and edge.parent not in nodes)
+            level = set(e.parent for n in level for e in n.incoming
+                        if not e.attrib.get("remote") and e.parent not in nodes)
 
         layer1.Layer1(root=other, attrib=passage.layer(layer1.LAYER_ID).attrib.copy())
         _copy_l1_nodes(passage, other, id_to_other, nodes, remarks=remarks)
@@ -1216,7 +1287,7 @@ def _copy_l1_nodes(passage, other, id_to_other, include=None, remarks=False):
     """
     l1 = passage.layer(layer1.LAYER_ID)
     other_l1 = other.layer(layer1.LAYER_ID)
-    queue = [(node, None) for node in l1.heads]
+    queue = [(n, None) for n in l1.heads]
     linkages = []
     remotes = []
     heads = []
