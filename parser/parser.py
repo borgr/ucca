@@ -40,6 +40,9 @@ class Parser(object):
         self.model_file = model_file
         self.feature_extractor = FeatureExtractor()
 
+        self.learning_rate = Config().learning_rate
+        self.decay_factor = Config().decay_factor
+
     def train(self, passages, dev=None, iterations=1):
         """
         Train parser on given passages
@@ -60,6 +63,7 @@ class Parser(object):
             print("Training iteration %d of %d: " % (iteration + 1, iterations))
             passages = [(passage, passage_id) for _, passage, passage_id in
                         self.parse(passages, mode="train")]
+            self.learning_rate *= self.decay_factor
             shuffle(passages)
             if dev:
                 print("Evaluating on dev passages")
@@ -189,7 +193,7 @@ class Parser(object):
                 best_true_action_id = max([true_action.id for true_action in true_actions],
                                           key=self.scores.get) if len(true_actions) > 1 \
                     else true_actions[0].id
-                rate = Config().learning_rate
+                rate = self.learning_rate
                 if Action.by_id(best_true_action_id).is_swap:
                     rate *= Config().importance
                 self.model.update(features, predicted_action.id, best_true_action_id, rate)
