@@ -389,7 +389,7 @@ def main():
                               for passage in fold]
             score.append(train_test(train_passages, dev_passages, test_passages, args))
         print("Scores for all folds: " + ", ".join("%.3f" % s for s in score))
-        print("Average: " + sum(score) / len(score))
+        print("Average: %.3f" % (sum(score) / len(score)))
     else:  # Simple train/dev/test by given arguments
         train_passages, dev_passages, test_passages = [read_files_and_dirs(arg) for arg in
                                                        (args.train, args.dev, args.passages)]
