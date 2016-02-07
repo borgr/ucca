@@ -18,7 +18,7 @@ import sys
 import xml.etree.ElementTree as ET
 import xml.sax.saxutils
 from collections import defaultdict
-from itertools import groupby
+from itertools import groupby, islice
 
 import nltk
 
@@ -1149,7 +1149,7 @@ def to_conll(passage, test=False):
 
 
 def from_sdp(lines, passage_id):
-    """Converts from parsed text in SDP format to a Passage object.
+    """Converts from parsed text in SemEval 2015 SDP format to a Passage object.
 
     :param lines: a multi-line string in SDP format, describing a single passage.
     :param passage_id: ID to set for passage
@@ -1160,7 +1160,7 @@ def from_sdp(lines, passage_id):
 
 
 def to_sdp(passage, test=False):
-    """ Convert from a Passage object to a string in SDP format (sdp)
+    """ Convert from a Passage object to a string in SemEval 2015 SDP format (sdp)
 
     :param passage: the Passage object to convert
     :param test: whether to omit the top, head, frame, etc. columns. Defaults to False
@@ -1168,6 +1168,120 @@ def to_sdp(passage, test=False):
     :return a multi-line string representing the semantic dependencies in the passage
     """
     return SdpConverter.to_dependency(passage, test)
+
+
+EXPORT_ID_OFFSET = 499
+
+
+def from_export(lines, passage_id=None):
+    """Converts from parsed text in NeGra export format to a Passage object.
+
+    :param lines: a multi-line string in NeGra export format, describing a single passage.
+    :param passage_id: ID to set for passage, overriding the ID from the file
+
+    :return a Passage object.
+    """
+
+    line_iterator = iter(lines)
+    line = next(line_iterator)
+    m = re.match("#BOS\s+(\d+).*", line)
+    assert m, "Invalid first line: " + line
+    if passage_id is None:
+        passage_id = m.group(1)
+
+    p = core.Passage(passage_id)
+    l0 = layer0.Layer0(p)
+    l1 = layer1.Layer1(p)
+    paragraph = 1
+    node_by_id = {}
+    pending_nodes = []
+    remotes = []
+    linkages = defaultdict(list)
+    terminals = []
+
+    while line_iterator:
+        line = next(line_iterator)
+        fields = line.split()
+        if fields[0].startswith("#EOS"):
+            break
+        m = re.match("#(\d+)", fields[0])
+        if not m:
+            terminals.append(fields[:5])
+            continue
+        node_id = m.group(1)
+        for edge_tag, parent_id in zip(fields[3::2], fields[4::2]):
+            if parent_id == "0":
+                node_by_id[node_id] = None
+            elif edge_tag.endswith("*"):
+                remotes.append((parent_id, edge_tag.rstrip("*"), node_id))
+            elif edge_tag in (EdgeTags.LinkArgument, EdgeTags.LinkRelation):
+                linkages[parent_id].append((node_id, edge_tag))
+            else:
+                pending_nodes.append((parent_id, edge_tag, node_id))
+
+    # add normal nodes
+    while pending_nodes:
+        for i in reversed(range(len(pending_nodes))):
+            parent_id, edge_tag, node_id = pending_nodes[i]
+            parent = node_by_id.get(parent_id, -1)
+            if parent != -1:
+                del pending_nodes[i]
+                node_by_id[node_id] = l1.add_fnode(parent, edge_tag)
+
+    # add remotes
+    for parent_id, edge_tag, node_id in remotes:
+        l1.add_remote(node_by_id[parent_id], edge_tag, node_by_id[node_id])
+
+    # add linkages
+    for node_id, children in linkages.items():
+        link_relation = next(node_by_id[i] for i, t in children if t == EdgeTags.LinkRelation)
+        link_arguments = [node_by_id[i] for i, t in children if t == EdgeTags.LinkArgument]
+        l1.add_linkage(link_relation, *link_arguments)
+
+    # add terminals
+    for text, tag, _, edge_tag, parent_id in terminals:
+        punctuation = (tag == layer0.NodeTags.Punct)
+        terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
+        node_by_id[parent_id].add(edge_tag, terminal)
+
+    return p
+
+
+def to_export(passage, test=False, secondary_parents=True):
+    """ Convert from a Passage object to a string in NeGra export format (export)
+
+    :param passage: the Passage object to convert
+    :param test: whether to omit the edge and parent columns. Defaults to False
+    :param secondary_parents: whether to include columns for non-primary parents. Defaults to False
+
+    :return a multi-line string representing a (discontinuous) tree structure constructed from the passage
+    """
+
+    def _unique_id(n):
+        return str(EXPORT_ID_OFFSET + int(n.ID.split(core.Node.ID_SEPARATOR)[1]))
+
+    lines = ["#BOS %s" % passage.ID]  # list of output lines to return
+    entries = []
+    terminals = passage.layer(layer0.LAYER_ID).all
+    non_terminals = passage.layer(layer1.LAYER_ID).all
+    for node in terminals + non_terminals:
+        # word/id, (POS) tag, morph tag, edge, parent, [second edge, second parent]*
+        identifier = node.text if node.layer.ID == layer0.LAYER_ID else ("#" + _unique_id(node))
+        fields = [identifier, node.tag, "--"]
+        if not test:
+            fields += sum([(edge.tag + ("*" if edge.attrib.get("remote") else ""),
+                            _unique_id(edge.parent))
+                           for edge in islice(sorted(node.incoming,  # take non-remote non-linkage first
+                                              key=lambda e: (e.attrib.get("remote", False),
+                                                             e.tag in (EdgeTags.LinkRelation,
+                                                                       EdgeTags.LinkArgument))),
+                                              None if secondary_parents else 1)],  # take all or just one
+                          ()) or ("--", 0)
+        entries.append(fields)
+    lines.append("\n".join("\t".join(str(field) for field in entry)
+                           for entry in entries))
+    lines.append("#EOS %s" % passage.ID)
+    return "\n".join(lines)
 
 
 def split2sentences(passage, remarks=False):

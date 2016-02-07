@@ -1,0 +1,37 @@
+#BOS 120
+1	Word	--	Terminal	502
+2	Word	--	Terminal	503
+3	Word	--	Terminal	504
+4	Word	--	Terminal	504
+.	Punctuation	--	Terminal	505
+6	Word	--	Terminal	508
+7	Word	--	Terminal	509
+8	Word	--	Terminal	510
+9	Word	--	Terminal	509
+10	Word	--	Terminal	511
+.	Punctuation	--	Terminal	512
+12	Word	--	Terminal	513
+13	Word	--	Terminal	514
+14	Word	--	Terminal	515
+15	Word	--	Terminal	518
+#500	FN	--	--	0
+#501	FN	--	L	500
+#502	FN	--	C	501
+#503	FN	--	E	501
+#504	FN	--	H	500
+#505	PNCT	--	U	504
+#506	FN	--	H	500
+#507	FN	--	A	506
+#508	FN	--	E	507
+#509	FN	--	C	507
+#510	FN	--	P	506
+#511	FN	--	F	500	D*	506
+#512	PNCT	--	U	500
+#513	FN	--	H	500	LA	519
+#514	FN	--	H	500	LA	519
+#515	FN	--	H	500	LA	519
+#516	FN	--	L	500	LR	519
+#517	FN	--	C	516
+#518	FN	--	E	516
+#519	LKG	--	--	0
+#EOS 120

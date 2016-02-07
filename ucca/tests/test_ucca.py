@@ -568,24 +568,35 @@ class ConversionTests(unittest.TestCase):
 
     def test_to_conll(self):
         passage = convert.from_standard(TestUtil.load_xml('test_files/standard3.xml'))
-        converted_dep = convert.to_conll(passage)
+        converted = convert.to_conll(passage)
         with open('test_files/standard3.conll') as f:
-            # f.write(converted_dep)
-            self.assertSequenceEqual(converted_dep, f.read())
-        converted_passage = convert.from_conll(converted_dep.split("\n"), passage.ID)
+            # f.write(converted)
+            self.assertSequenceEqual(converted, f.read())
+        converted_passage = convert.from_conll(converted.split("\n"), passage.ID)
         # ioutil.passage2file(converted_passage, 'test_files/standard3.conll.xml')
         ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.conll.xml'))
         self.assertTrue(converted_passage.equals(ref))
 
     def test_to_sdp(self):
         passage = convert.from_standard(TestUtil.load_xml('test_files/standard3.xml'))
-        converted_dep = convert.to_sdp(passage)
+        converted = convert.to_sdp(passage)
         with open('test_files/standard3.sdp') as f:
-            # f.write(converted_dep)
-            self.assertSequenceEqual(converted_dep, f.read())
-        converted_passage = convert.from_sdp(converted_dep.split("\n"), passage.ID)
+            # f.write(converted)
+            self.assertSequenceEqual(converted, f.read())
+        converted_passage = convert.from_sdp(converted.split("\n"), passage.ID)
         # ioutil.passage2file(converted_passage, 'test_files/standard3.sdp.xml')
         ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.sdp.xml'))
+        self.assertTrue(converted_passage.equals(ref))
+
+    def test_to_export(self):
+        passage = convert.from_standard(TestUtil.load_xml('test_files/standard3.xml'))
+        converted = convert.to_export(passage)
+        with open('test_files/standard3.export') as f:
+            # f.write(converted)
+            self.assertSequenceEqual(converted, f.read())
+        converted_passage = convert.from_export(converted.split("\n"), passage.ID)
+        # ioutil.passage2file(converted_passage, 'test_files/standard3.export.xml')
+        ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.export.xml'))
         self.assertTrue(converted_passage.equals(ref))
 
 

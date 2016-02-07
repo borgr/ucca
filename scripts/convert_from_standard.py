@@ -9,7 +9,7 @@ from ucca import convert
 from ucca.ioutil import file2passage
 
 desc = """Parses UCCA standard format in XML or binary pickle,
-and writes as CoNLL-X or SDP format.
+and writes as CoNLL-X, SemEval 2015 SDP, NeGra export or text format.
 """
 
 
@@ -30,8 +30,8 @@ def main():
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("filenames", nargs="+",
                         help="passage file names to convert")
-    parser.add_argument("-f", "--format", choices=("conll", "sdp", "txt"), default="conll",
-                        help="output file format")
+    parser.add_argument("-f", "--format", choices=("conll", "sdp", "export", "txt"),
+                        default="conll", help="output file format")
     parser.add_argument("-o", "--outdir", default=".",
                         help="output directory")
     parser.add_argument("-p", "--prefix", default="ucca_passage",
@@ -47,6 +47,8 @@ def main():
         converter = convert.to_conll
     elif args.format == "sdp":
         converter = convert.to_sdp
+    elif args.format == "export":
+        converter = convert.to_export
     elif args.format == "txt":
         converter = convert.to_text
 
