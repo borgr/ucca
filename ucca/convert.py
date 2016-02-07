@@ -1170,9 +1170,6 @@ def to_sdp(passage, test=False):
     return SdpConverter.to_dependency(passage, test)
 
 
-EXPORT_ID_OFFSET = 499
-
-
 def from_export(lines, passage_id=None):
     """Converts from parsed text in NeGra export format to a Passage object.
 
@@ -1257,27 +1254,45 @@ def to_export(passage, test=False, secondary_parents=True):
     :return a multi-line string representing a (discontinuous) tree structure constructed from the passage
     """
 
-    def _unique_id(n):
-        return str(EXPORT_ID_OFFSET + int(n.ID.split(core.Node.ID_SEPARATOR)[1]))
+    class _IdGenerator:
+        def __init__(self):
+            self._id = 499
+
+        def __call__(self):
+            self._id += 1
+            return str(self._id)
 
     lines = ["#BOS %s" % passage.ID]  # list of output lines to return
     entries = []
-    terminals = passage.layer(layer0.LAYER_ID).all
-    non_terminals = passage.layer(layer1.LAYER_ID).all
-    for node in terminals + non_terminals:
-        # word/id, (POS) tag, morph tag, edge, parent, [second edge, second parent]*
-        identifier = node.text if node.layer.ID == layer0.LAYER_ID else ("#" + _unique_id(node))
-        fields = [identifier, node.tag, "--"]
-        if not test:
-            fields += sum([(edge.tag + ("*" if edge.attrib.get("remote") else ""),
-                            _unique_id(edge.parent))
-                           for edge in islice(sorted(node.incoming,  # take non-remote non-linkage first
-                                              key=lambda e: (e.attrib.get("remote", False),
-                                                             e.tag in (EdgeTags.LinkRelation,
-                                                                       EdgeTags.LinkArgument))),
-                                              None if secondary_parents else 1)],  # take all or just one
-                          ()) or ("--", 0)
-        entries.append(fields)
+    nodes = list(passage.layer(layer0.LAYER_ID).all)
+    node_to_id = defaultdict(_IdGenerator())
+    while nodes:
+        next_nodes = []
+        for node in nodes:
+            if node.ID in node_to_id:
+                continue
+            children = [child for child in node.children if
+                        child.layer.ID != layer0.LAYER_ID and child.ID not in node_to_id]
+            if children:
+                next_nodes += children
+                continue
+            next_nodes += node.parents
+            # word/id, (POS) tag, morph tag, edge, parent, [second edge, second parent]*
+            identifier = node.text if node.layer.ID == layer0.LAYER_ID else ("#" + node_to_id[node.ID])
+            fields = [identifier, node.tag, "--"]
+            if not test:
+                fields += sum([(edge.tag + ("*" if edge.attrib.get("remote") else ""), edge.parent.ID)
+                               for edge in islice(sorted(node.incoming,  # non-remote non-linkage first
+                                                  key=lambda e: (e.attrib.get("remote", False),
+                                                                 e.tag in (EdgeTags.LinkRelation,
+                                                                           EdgeTags.LinkArgument))),
+                                                  None if secondary_parents else 1)],  # all or just one
+                              ()) or ("--", 0)
+            entries.append(fields)
+        nodes = next_nodes
+    for fields in entries:
+        for i in range(4, len(fields), 2):
+            fields[i] = node_to_id.get(fields[i], 0)
     lines.append("\n".join("\t".join(str(field) for field in entry)
                            for entry in entries))
     lines.append("#EOS %s" % passage.ID)
