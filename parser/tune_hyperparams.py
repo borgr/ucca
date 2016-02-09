@@ -53,7 +53,7 @@ class Hyperparams(object):
 def main():
     out_file = os.environ.get("HYPERPARAMS_FILE", "hyperparams.csv")
     num = int(os.environ.get("HYPERPARAMS_NUM", 30))
-    dims = np.repeat(int(np.sqrt(num + 1)), 2)
+    dims = (num, 2)
     hyperparams = list(set(
         Hyperparams(learning_rate, decay_factor)
         for learning_rate, decay_factor in
