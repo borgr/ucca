@@ -1137,7 +1137,7 @@ def from_conll(lines, passage_id):
     return ConllConverter.from_dependency(lines, passage_id)
 
 
-def to_conll(passage, test=False):
+def to_conll(passage, test=False, *args, **kwargs):
     """ Convert from a Passage object to a string in CoNLL-X format (conll)
 
     :param passage: the Passage object to convert
@@ -1145,6 +1145,7 @@ def to_conll(passage, test=False):
 
     :return a multi-line string representing the dependencies in the passage
     """
+    del args, kwargs
     return ConllConverter.to_dependency(passage, test)
 
 
@@ -1159,7 +1160,7 @@ def from_sdp(lines, passage_id):
     return SdpConverter.from_dependency(lines, passage_id)
 
 
-def to_sdp(passage, test=False):
+def to_sdp(passage, test=False, *args, **kwargs):
     """ Convert from a Passage object to a string in SemEval 2015 SDP format (sdp)
 
     :param passage: the Passage object to convert
@@ -1167,6 +1168,7 @@ def to_sdp(passage, test=False):
 
     :return a multi-line string representing the semantic dependencies in the passage
     """
+    del args, kwargs
     return SdpConverter.to_dependency(passage, test)
 
 
@@ -1244,12 +1246,12 @@ def from_export(lines, passage_id=None):
     return p
 
 
-def to_export(passage, test=False, secondary_parents=True):
+def to_export(passage, test=False, tree=False):
     """ Convert from a Passage object to a string in NeGra export format (export)
 
     :param passage: the Passage object to convert
     :param test: whether to omit the edge and parent columns. Defaults to False
-    :param secondary_parents: whether to include columns for non-primary parents. Defaults to False
+    :param tree: whether to omit columns for non-primary parents. Defaults to False
 
     :return a multi-line string representing a (discontinuous) tree structure constructed from the passage
     """
@@ -1276,21 +1278,23 @@ def to_export(passage, test=False, secondary_parents=True):
             if children:
                 next_nodes += children
                 continue
-            next_nodes += node.parents
+            incoming = list(islice(sorted(node.incoming,  # non-remote non-linkage first
+                                          key=lambda e: (e.attrib.get("remote", False),
+                                                         e.tag in (EdgeTags.LinkRelation,
+                                                                   EdgeTags.LinkArgument))),
+                                   1 if tree else None))  # all or just one
+            next_nodes += [e.parent for e in incoming]
             # word/id, (POS) tag, morph tag, edge, parent, [second edge, second parent]*
             identifier = node.text if node.layer.ID == layer0.LAYER_ID else ("#" + node_to_id[node.ID])
             fields = [identifier, node.tag, "--"]
-            if not test:
-                fields += sum([(edge.tag + ("*" if edge.attrib.get("remote") else ""), edge.parent.ID)
-                               for edge in islice(sorted(node.incoming,  # non-remote non-linkage first
-                                                  key=lambda e: (e.attrib.get("remote", False),
-                                                                 e.tag in (EdgeTags.LinkRelation,
-                                                                           EdgeTags.LinkArgument))),
-                                                  None if secondary_parents else 1)],  # all or just one
-                              ()) or ("--", 0)
+            if not test:  # append two elements for each edge: (edge tag, parent ID)
+                fields += sum([(e.tag + ("*" if e.attrib.get("remote") else ""), e.parent.ID)
+                               for e in incoming], ()) or ("--", 0)
             entries.append(fields)
+        if test:  # do not print non-terminal nodes
+            break
         nodes = next_nodes
-    for fields in entries:
+    for fields in entries:  # correct from source standard ID to generated node IDs
         for i in range(4, len(fields), 2):
             fields[i] = node_to_id.get(fields[i], 0)
     lines.append("\n".join("\t".join(str(field) for field in entry)
