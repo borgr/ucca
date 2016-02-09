@@ -4,7 +4,7 @@ import numpy as np
 
 import parser
 from config import Config
-from evaluation import UNLABELED, WEAK_LABELED, LABELED
+from ucca.evaluation import UNLABELED, WEAK_LABELED, LABELED
 
 
 class Hyperparams(object):
