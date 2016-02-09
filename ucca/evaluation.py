@@ -4,8 +4,7 @@ The evaluation software for UCCA layer 1.
 """
 from collections import Counter
 
-from ucca.layer1 import EdgeTags
-from ucca.layer1 import NodeTags
+from ucca.layer1 import EdgeTags, NodeTags
 
 UNLABELED = "unlabeled"
 WEAK_LABELED = "weak_labeled"
@@ -217,27 +216,58 @@ def tag_distribution(unit_list):
     return Counter(u.tag for u in unit_list)
 
 
-class Results(object):
-    def __init__(self, regular_scores, remote_scores):
-        self.regular_scores = regular_scores
-        self.remote_scores = remote_scores
+class Scores(object):
+    def __init__(self, evaluators):
+        self.evaluators = dict(evaluators)
+
+    def average_f1(self):
+        """
+        Calculate the average F1 score across evaluation types and regular/remote edges
+        Note: gives the same weight to regular and remote edges, and to labeled/unlabeled
+        :return: a single number, the average F1
+        """
+        scores = [s.f1 for v in self.evaluators.values()
+                  for s in (v.regular, v.remotes)
+                  if s.f1 != "NaN"]
+        return sum(scores) / len(scores) if scores else 0
+
+    @staticmethod
+    def aggregate(scores):
+        """
+        Aggregate multiple Scores instances
+        :param scores: iterable of Scores objects
+        :return: a single Scores object
+        """
+        return Scores((t, EvaluatorResults.aggregate(s.evaluators[t] for s in scores))
+                      for t in EVAL_TYPES)
+
+    def print(self):
+        for eval_type in EVAL_TYPES:
+            print("Evaluation type: (" + eval_type + ")")
+            self.evaluators[eval_type].print()
+
+
+class EvaluatorResults(object):
+    def __init__(self, regular, remotes):
+        self.regular = regular
+        self.remotes = remotes
 
     def print(self):
         print("\nRegular Edges:")
-        self.regular_scores.print()
+        self.regular.print()
 
         print("\nRemote Edges:")
-        self.remote_scores.print()
+        self.remotes.print()
         print()
 
     @classmethod
     def aggregate(cls, results):
-        regular_scores, remote_scores = zip(*((r.regular_scores, r.remote_scores) for r in results))
-        return Results(Scores.aggregate(regular_scores),
-                       Scores.aggregate(remote_scores))
+        regular, remotes = zip(*[(r.regular, r.remotes) for r in results])
+        return EvaluatorResults(SummaryStatistics.aggregate(regular),
+                                SummaryStatistics.aggregate(remotes))
 
 
-class Scores(object):
+class SummaryStatistics(object):
     def __init__(self, num_matches, num_only_guessed, num_only_ref):
         self.num_matches = num_matches
         self.num_only_guessed = num_only_guessed
@@ -262,9 +292,9 @@ class Scores(object):
     def aggregate(cls, scores):
         num_matches, num_only_guessed, num_only_ref = zip(*(
             (s.num_matches, s.num_only_guessed, s.num_only_ref) for s in scores))
-        return Scores(sum(num_matches),
-                      sum(num_only_guessed),
-                      sum(num_only_ref))
+        return SummaryStatistics(sum(num_matches),
+                                 sum(num_only_guessed),
+                                 sum(num_only_ref))
 
 
 def get_scores(p1, p2, eval_type, units, fscore, errors, verbose=True):
@@ -277,7 +307,7 @@ def get_scores(p1, p2, eval_type, units, fscore, errors, verbose=True):
     :param fscore: whether to find and return the scores
     :param errors: whether to calculate and print the confusion matrix of errors
     :param verbose: whether to print the scores
-    :returns Results object if fscore is True, otherwise None
+    :returns EvaluatorResults object if fscore is True, otherwise None
     """
     verbose_message = "Common disagreement:\nTag1|(or)Tag2-(instead of)Tag3 sentence beginning {point of disagreement} sentence end"
     if verbose and eval_type != UNLABELED:
@@ -302,8 +332,12 @@ def get_scores(p1, p2, eval_type, units, fscore, errors, verbose=True):
             print(get_text(p1, y))
 
     if fscore:
-        res = Results(Scores(len(mutual), len(all1 - mutual), len(all2 - mutual)),
-                      Scores(len(mutual_rem), len(all1_rem - mutual_rem), len(all2_rem - mutual_rem)))
+        res = EvaluatorResults(SummaryStatistics(len(mutual),
+                                                 len(all1 - mutual),
+                                                 len(all2 - mutual)),
+                               SummaryStatistics(len(mutual_rem),
+                                                 len(all1_rem - mutual_rem),
+                                                 len(all2_rem - mutual_rem)))
         if verbose:
             res.print()
 
@@ -323,50 +357,13 @@ def evaluate(guessed_passage, ref_passage, verbose=True, units=True, fscore=True
     :param units: whether to evaluate common units
     :param fscore: whether to compute precision, recall and f1 score
     :param errors: whether to print the mistakes
-    :return: dictionary with entries LABELED, UNLABELED, WEAK_LABELED,
-             each a Results object with regular_scores and remote_scores fields,
-             each a Scores object with fields:
-             num_matches, num_only_guessed, num_only_ref, num_guessed, num_ref, p, r, f1
+    :return: Scores object
     """
     for passage in (guessed_passage, ref_passage):
         if passage is not None:
             flatten_centers(passage)  # flatten Cs inside Cs
-
-    res = {}
-    for evaluation_type in EVAL_TYPES:
-        res[evaluation_type] = get_scores(guessed_passage, ref_passage, evaluation_type,
-                                          units, fscore, errors, verbose)
-
-    return res
-
-
-def average_f1(results):
-    """
-    Calculate the average F1 score across instances, evaluation types and regular/remote
-    Note: currently gives the same weight to regular and remote edges, and to labeled/unlabeled
-    :param results: iterable of dictionaries of evaluation types to Results objects
-    :return: a single number, the average F1
-    """
-    scores = [s.f1 for r in results for v in r.values()
-              for s in (v.regular_scores, v.remote_scores) if s.f1 != "NaN"]
-    return sum(scores) / len(scores) if scores else 0
-
-
-def aggregate(results):
-    """
-    Aggregate Results object instances for each evaluation type
-    :param results: iterable of dictionaries of evaluation type to Results objects
-    :return: list of (evaluation type, aggregated Results object) pairs
-    """
-    return [(t, Results.aggregate(r[t] for r in results)) for t in EVAL_TYPES]
-
-
-def print_aggregate(results):
-    """
-    Print the aggregated Results objects from several evaluation types
-    :param results: iterable of dictionaries of evaluation types to Results objects
-    """
-    for t, r in aggregate(results):
-        print("Evaluation type: (" + t + ")")
-        r.print()
+    return Scores((evaluation_type,
+                   get_scores(guessed_passage, ref_passage, evaluation_type,
+                              units, fscore, errors, verbose))
+                  for evaluation_type in EVAL_TYPES)
 

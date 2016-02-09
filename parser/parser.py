@@ -14,7 +14,7 @@ from features import FeatureExtractor
 from oracle import Oracle
 from state import State
 from ucca import core, layer0, layer1, convert, ioutil, diffutil
-from ucca.evaluation import evaluate, print_aggregate, average_f1
+from ucca.evaluation import evaluate, Scores
 
 
 class ParserException(Exception):
@@ -72,7 +72,7 @@ class Parser(object):
                                               verbose=False, units=False, errors=False))
                                     for predicted_passage, passage, passage_id in
                                     self.parse(dev, mode="dev")])
-                score = average_f1(scores)
+                score = Scores.aggregate(scores).average_f1()
                 print("Average F1 score on dev: %.3f" % score)
                 if score >= best_score:
                     print("Better than previous best score (%.3f)" % best_score)
@@ -349,28 +349,26 @@ def write_passage(passage, outdir, prefix, binary, verbose):
 
 
 def train_test(train_passages, dev_passages, test_passages, args):
-    score = None
+    scores = None
     parser = Parser(args.model)
     parser.train(train_passages, dev=dev_passages, iterations=args.iterations)
     if test_passages:
         if args.train:
             print("Evaluating on test passages")
-        scores = []
+        passage_scores = []
         for guessed_passage, ref_passage, _ in parser.parse(test_passages):
             if isinstance(ref_passage, core.Passage):
-                scores.append(evaluate(guessed_passage, ref_passage,
-                                       verbose=args.verbose and guessed_passage is not None))
+                passage_scores.append(evaluate(guessed_passage, ref_passage,
+                                               verbose=args.verbose and guessed_passage is not None))
             if guessed_passage is not None:
                 write_passage(guessed_passage,
                               args.outdir, args.prefix, args.binary, args.verbose)
-        if scores:
-            score = average_f1(scores)
-            print()
-            print("Average F1 score on test: %.3f" % score)
+        if passage_scores:
+            scores = Scores.aggregate(passage_scores)
+            print("\nAverage F1 score on test: %.3f" % scores.average_f1())
             print("Aggregated scores:")
-            print()
-            print_aggregate(scores)
-    return score
+            scores.print()
+    return scores
 
 
 def main():
@@ -378,7 +376,7 @@ def main():
     print("Running parser with %s" % Config())
     if args.folds is not None:
         k = args.folds
-        score = []
+        fold_scores = []
         all_passages = list(read_files_and_dirs(args.passages))
         assert len(all_passages) >= k,\
             "%d folds are not possible with only %d passages" % (k, len(all_passages))
@@ -391,14 +389,17 @@ def main():
             train_passages = [passage for fold in folds
                               if fold is not dev_passages and fold is not test_passages
                               for passage in fold]
-            score.append(train_test(train_passages, dev_passages, test_passages, args))
-        print("Scores for all folds: " + ", ".join("%.3f" % s for s in score))
-        print("Average: %.3f" % (sum(score) / len(score)))
+            fold_scores.append(train_test(train_passages, dev_passages, test_passages, args))
+        scores = Scores.aggregate(fold_scores)
+        print("Average F1 score for each fold: " + ", ".join(
+            "%.3f" % s.average_f1() for s in fold_scores))
+        print("Aggregated scores across folds:\n")
+        scores.print()
     else:  # Simple train/dev/test by given arguments
         train_passages, dev_passages, test_passages = [read_files_and_dirs(arg) for arg in
                                                        (args.train, args.dev, args.passages)]
-        score = train_test(train_passages, dev_passages, test_passages, args)
-    return score
+        scores = train_test(train_passages, dev_passages, test_passages, args)
+    return scores
 
 
 if __name__ == "__main__":
