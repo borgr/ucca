@@ -1182,7 +1182,10 @@ def from_export(lines, passage_id=None):
     """
 
     line_iterator = iter(lines)
-    line = next(line_iterator)
+    try:
+        line = next(line_iterator)
+    except StopIteration:
+        raise ValueError("Empty input file")
     m = re.match("#BOS\s+(\d+).*", line)
     assert m, "Invalid first line: " + line
     if passage_id is None:
