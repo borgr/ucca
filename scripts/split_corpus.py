@@ -23,6 +23,7 @@ def copy(src, dest, link=False):
 
 def split_passages(directory, train=TRAIN_DEFAULT, dev=DEV_DEFAULT, link=False):
     filenames = sorted(os.listdir(directory))
+    assert filenames, "No files to split"
     directory = os.path.abspath(directory)
     if not directory.endswith(os.sep):
         directory += os.sep
