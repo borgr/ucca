@@ -25,7 +25,7 @@ See [`ucca/README.md`](ucca/README.md) for a list of modules under the `ucca` pa
 
 The `scripts` package contains various utilities for processing passage files.
 
-The `parser` package contains code for a full UCCA parser, currently under construction.
+The `parsing` package contains code for a full UCCA parser, currently under construction.
 
 Authors
 ------
