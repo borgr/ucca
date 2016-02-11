@@ -1200,6 +1200,7 @@ def from_export(lines, passage_id=None):
     remotes = []
     linkages = defaultdict(list)
     terminals = []
+    node_ids_with_children = set()
 
     while line_iterator:
         line = next(line_iterator)
@@ -1208,10 +1209,13 @@ def from_export(lines, passage_id=None):
             break
         m = re.match("#(\d+)", fields[0])
         if not m:
+            parent_id = fields[4]
+            node_ids_with_children.add(parent_id)
             terminals.append(fields[:5])
             continue
         node_id = m.group(1)
         for edge_tag, parent_id in zip(fields[3::2], fields[4::2]):
+            node_ids_with_children.add(parent_id)
             if parent_id == "0":
                 node_by_id[node_id] = None
             elif edge_tag.endswith("*"):
@@ -1228,7 +1232,8 @@ def from_export(lines, passage_id=None):
             parent = node_by_id.get(parent_id, -1)
             if parent != -1:
                 del pending_nodes[i]
-                node_by_id[node_id] = l1.add_fnode(parent, edge_tag)
+                node_by_id[node_id] = l1.add_fnode(parent, edge_tag,
+                                                   implicit=node_id not in node_ids_with_children)
 
     # add remotes
     for parent_id, edge_tag, node_id in remotes:

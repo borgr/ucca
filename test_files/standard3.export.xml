@@ -90,7 +90,7 @@
       </edge>
     </node>
     <node ID="1.3" type="FN">
-      <attributes />
+      <attributes implicit="True" />
     </node>
     <node ID="1.4" type="FN">
       <attributes />
