@@ -544,7 +544,7 @@ class ConversionTests(unittest.TestCase):
 
     def test_from_text(self):
         sample = ['Hello . again', 'nice', ' ?! end', '']
-        passage = convert.from_text(sample)
+        passage = next(convert.from_text(sample))
         terms = passage.layer(layer0.LAYER_ID).all
         pos = 0
         for i, par in enumerate(sample):

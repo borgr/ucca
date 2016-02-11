@@ -666,23 +666,30 @@ def is_punctuation(token):
            UNICODE_ESCAPE_PATTERN.match(token)
 
 
-def from_text(text, passage_id='1'):
+def from_text(text, passage_id='1', split=False):
     """Converts from tokenized strings to a Passage object.
 
     :param text: a sequence of strings, where each one will be a new paragraph.
     :param passage_id: ID to set for passage
+    :param split: split each paragraph to its own passage
 
-    :return a Passage object with only Terminals units.
+    :return generator of Passage object with only Terminals units.
     """
-    p = core.Passage(passage_id)
-    l0 = layer0.Layer0(p)
-
+    p = None
+    l0 = None
     for i, par in enumerate(text):
+        if p is None:
+            p = core.Passage(passage_id)
+            l0 = layer0.Layer0(p)
         for token in par.split():
             # i is paragraph index, but it starts with 0, so we need to add +1
             l0.add_terminal(text=token, punct=is_punctuation(token),
                             paragraph=(i + 1))
-    return p
+        if split:
+            yield p
+            p = None
+    if not split:
+        yield p
 
 
 def to_text(passage, sentences=True):
@@ -1290,7 +1297,7 @@ def from_conll(lines, passage_id, split=False):
 
     :return a Passage object.
     """
-    return ConllConverter().from_format(lines, passage_id)
+    return ConllConverter().from_format(lines, passage_id, split)
 
 
 def to_conll(passage, test=False, *args, **kwargs):
@@ -1314,7 +1321,7 @@ def from_sdp(lines, passage_id, split=False):
 
     :return a Passage object.
     """
-    return SdpConverter().from_format(lines, passage_id)
+    return SdpConverter().from_format(lines, passage_id, split)
 
 
 def to_sdp(passage, test=False, *args, **kwargs):
