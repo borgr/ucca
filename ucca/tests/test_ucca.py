@@ -572,7 +572,7 @@ class ConversionTests(unittest.TestCase):
         with open('test_files/standard3.conll') as f:
             # f.write(converted)
             self.assertSequenceEqual(converted, f.read())
-        converted_passage = convert.from_conll(converted.split("\n"), passage.ID)
+        converted_passage = next(convert.from_conll(converted.split("\n"), passage.ID))
         # ioutil.passage2file(converted_passage, 'test_files/standard3.conll.xml')
         ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.conll.xml'))
         self.assertTrue(converted_passage.equals(ref))
@@ -583,7 +583,7 @@ class ConversionTests(unittest.TestCase):
         with open('test_files/standard3.sdp') as f:
             # f.write(converted)
             self.assertSequenceEqual(converted, f.read())
-        converted_passage = convert.from_sdp(converted.split("\n"), passage.ID)
+        converted_passage = next(convert.from_sdp(converted.split("\n"), passage.ID))
         # ioutil.passage2file(converted_passage, 'test_files/standard3.sdp.xml')
         ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.sdp.xml'))
         self.assertTrue(converted_passage.equals(ref))
@@ -594,7 +594,7 @@ class ConversionTests(unittest.TestCase):
         with open('test_files/standard3.export') as f:
             # f.write(converted)
             self.assertSequenceEqual(converted, f.read())
-        converted_passage = convert.from_export(converted.split("\n"), passage.ID)
+        converted_passage = next(convert.from_export(converted.split("\n"), passage.ID))
         # ioutil.passage2file(converted_passage, 'test_files/standard3.export.xml')
         ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.export.xml'))
         self.assertTrue(converted_passage.equals(ref))

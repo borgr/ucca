@@ -18,7 +18,7 @@ import sys
 import xml.etree.ElementTree as ET
 import xml.sax.saxutils
 from collections import defaultdict
-from itertools import groupby, islice
+from itertools import groupby, islice, tee
 
 import nltk
 
@@ -748,8 +748,15 @@ def to_sequence(passage):
         seq += ' '
 
 
-class DependencyConverter(object):
-    
+class FormatConverter(object):
+    def from_format(self, lines, passage_id, split=False):
+        pass
+
+    def to_format(self, passage, test=False):
+        pass
+
+
+class DependencyConverter(FormatConverter):
     ROOT = "ROOT"
 
     class Node:
@@ -807,14 +814,14 @@ class DependencyConverter(object):
     def omit_edge(edge):
         return False
 
-    @classmethod
-    def from_dependency(cls, lines, passage_id):
+    def from_format(self, lines, passage_id, split=False):
         """Converts from parsed text in dependency format to a Passage object.
 
         :param lines: an iterable of lines in dependency format, describing a single passage.
         :param passage_id: ID to set for passage
+        :param split: split each sentence to its own passage
 
-        :return a Passage object.
+        :return generator of Passage objects.
         """
 
         def _topological_sort(nodes):
@@ -850,25 +857,36 @@ class DependencyConverter(object):
             else:
                 return EdgeTags.Center
 
-        p = core.Passage(passage_id)
-        l0 = layer0.Layer0(p)
-        l1 = layer1.Layer1(p)
-        paragraph = 1
+        p = None
+        sentence_id = None
 
         # read dependencies and terminals from lines and create nodes based upon them
-        line_iterator = iter(lines)
+        it1, it2 = tee(lines)  # two iterators in order to be able to peek at comments
         while True:
-            dep_nodes, preds = cls.read(line_iterator, l0, paragraph)
-            if not dep_nodes:
-                break
+            m = re.match("#(\d*).*", next(it2))  # check for comment
+            if m:
+                next(it1)  # skip line
+                sentence_id = m.group(1)  # see if this is a sentence ID or just another comment
+                if not sentence_id:
+                    continue
+
+            if p is None:
+                p = core.Passage(sentence_id or passage_id)
+                l0 = layer0.Layer0(p)
+                l1 = layer1.Layer1(p)
+                paragraph = 1
+
+            dep_nodes, preds = self.read(it1, l0, paragraph)  # different implementation for each subclass
+            if not dep_nodes:  # end of file
+                return
             paragraph += 1
-            cls.link_heads(dep_nodes[1:], preds)
+            self.link_heads(dep_nodes[1:], preds)
             # create nodes starting from the root and going down to pre-terminals
             linkages = defaultdict(list)
             dep_nodes = _topological_sort(dep_nodes)
             for dep_node in dep_nodes:
                 incoming_rels = {e.rel for e in dep_node.incoming}
-                if incoming_rels == {cls.ROOT}:
+                if incoming_rels == {self.ROOT}:
                     # keep dep_node.node as None so that dependents are attached to the root
                     dep_node.preterminal = l1.add_fnode(None, _label_edge(dep_node))
                 elif incoming_rels == {EdgeTags.Terminal}:  # part of non-analyzable expression
@@ -922,10 +940,11 @@ class DependencyConverter(object):
                 if layer0.is_punct(dep_node.terminal):
                     dep_node.preterminal.tag = layer1.NodeTags.Punctuation
 
-        return p
+            yield p
+            p = None
+            sentence_id = None
 
-    @classmethod
-    def to_dependency(cls, passage, test=False):
+    def to_format(self, passage, test=False):
         """ Convert from a Passage object to a string in CoNLL-X format (conll)
 
         :param passage: the Passage object to convert
@@ -979,6 +998,7 @@ class DependencyConverter(object):
             :param unit: unit to start from
             :return generator of edges
             """
+            # This iterative implementation has a bug... find it and re-enable
             # remaining = list(unit.incoming)
             # ret = []
             # while remaining:
@@ -1012,12 +1032,12 @@ class DependencyConverter(object):
             edges = list(_find_top_headed_edges(terminal))
             head_indices = [_find_head_terminal(e.parent).position - 1 for e in edges]
             # (head positions, dependency relations, is remote for each one)
-            incoming = [cls.Edge(head_index, e.tag, e.attrib.get("remote", False))
+            incoming = [self.Edge(head_index, e.tag, e.attrib.get("remote", False))
                         for e, head_index in zip(edges, head_indices)
                         if head_index != terminal.position - 1 and  # avoid self loops
-                        not cls.omit_edge(e)]
-            dep_nodes.append(cls.Node(incoming, terminal))
-        cls.link_heads(dep_nodes, dep_nodes)
+                        not self.omit_edge(e)]  # different implementation for each subclass
+            dep_nodes.append(self.Node(incoming, terminal))
+        self.link_heads(dep_nodes, dep_nodes)
 
         # find cycles and remove them
         while True:
@@ -1031,12 +1051,11 @@ class DependencyConverter(object):
             edge.remove()
 
         lines.append("\n".join("\t".join(str(field) for field in entry)
-                               for entry in cls.generate(dep_nodes, test)))
+                               for entry in self.generate(dep_nodes, test)))  # different for each subclass
         return "\n".join(lines)
 
 
 class ConllConverter(DependencyConverter):
-
     @staticmethod
     def read(it, l0, paragraph):
         # id, form, lemma, coarse pos, fine pos, features, head, relation
@@ -1080,7 +1099,6 @@ class ConllConverter(DependencyConverter):
 
 
 class SdpConverter(DependencyConverter):
-
     @staticmethod
     def read(it, l0, paragraph):
         # id, form, lemma, pos, top, pred, frame, arg1, arg2, ...
@@ -1124,17 +1142,155 @@ class SdpConverter(DependencyConverter):
                           [heads.get(pred, "_") for pred in preds]  # rel for each pred
             yield fields
         yield []
+        
+        
+class ExportConverter(FormatConverter):
+    def __init__(self):
+        self.p = None
+        self.passage_id = None
+
+    def _init_passage(self, line):
+        m = re.match("#BOS\s+(\d+).*", line)
+        assert m, "Invalid first line: " + line
+        if self.passage_id is None:
+            self.passage_id = m.group(1)
+        self.p = core.Passage(self.passage_id)
+        self.node_by_id = {}
+        self.pending_nodes = []
+        self.remotes = []
+        self.linkages = defaultdict(list)
+        self.terminals = []
+        self.node_ids_with_children = set()
+    
+    def _read_line(self, line):
+        fields = line.split()
+        m = re.match("#(\d+)", fields[0])
+        if not m:  # does not start with a # and a number; then it is a terminal
+            parent_id = fields[4]
+            self.node_ids_with_children.add(parent_id)
+            self.terminals.append(fields[:5])
+            return
+        node_id = m.group(1)
+        for edge_tag, parent_id in zip(fields[3::2], fields[4::2]):
+            self.node_ids_with_children.add(parent_id)
+            if parent_id == "0":
+                self.node_by_id[node_id] = None
+            elif edge_tag.endswith("*"):
+                self.remotes.append((parent_id, edge_tag.rstrip("*"), node_id))
+            elif edge_tag in (EdgeTags.LinkArgument, EdgeTags.LinkRelation):
+                self.linkages[parent_id].append((node_id, edge_tag))
+            else:
+                self.pending_nodes.append((parent_id, edge_tag, node_id))
+
+    def _build_passage(self):
+        l0 = layer0.Layer0(self.p)
+        l1 = layer1.Layer1(self.p)
+        paragraph = 1
+        
+        # add normal nodes
+        while self.pending_nodes:
+            for i in reversed(range(len(self.pending_nodes))):
+                parent_id, edge_tag, node_id = self.pending_nodes[i]
+                parent = self.node_by_id.get(parent_id, -1)
+                if parent != -1:
+                    del self.pending_nodes[i]
+                    implicit = node_id not in self.node_ids_with_children
+                    self.node_by_id[node_id] = l1.add_fnode(parent, edge_tag, implicit=implicit)
+
+        # add self.remotes
+        for parent_id, edge_tag, node_id in self.remotes:
+            l1.add_remote(self.node_by_id[parent_id], edge_tag, self.node_by_id[node_id])
+
+        # add self.linkages
+        for node_id, children in self.linkages.items():
+            link_relation = next(self.node_by_id[i] for i, t in children if t == EdgeTags.LinkRelation)
+            link_arguments = [self.node_by_id[i] for i, t in children if t == EdgeTags.LinkArgument]
+            l1.add_linkage(link_relation, *link_arguments)
+
+        # add self.terminals
+        for text, tag, _, edge_tag, parent_id in self.terminals:
+            punctuation = (tag == layer0.NodeTags.Punct)
+            terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
+            self.node_by_id[parent_id].add(edge_tag, terminal)
+            
+    def from_format(self, lines, passage_id, split=False):
+        self.passage_id = passage_id
+        it = iter(lines)
+        self.p = None
+    
+        while True:
+            try:
+                line = next(it)
+            except StopIteration:
+                return
+            
+            if self.p is None:
+                self._init_passage(line)
+            elif line.startswith("#EOS"):  # finished reading input for a passage
+                self._build_passage()
+                yield self.p
+                self.p = None
+            else:  # read input line
+                self._read_line(line)
+                
+    class _IdGenerator:
+        def __init__(self):
+            self._id = 499
+    
+        def __call__(self):
+            self._id += 1
+            return str(self._id)
+
+    def to_format(self, passage, test=False, tree=False):
+        lines = ["#BOS %s" % passage.ID]  # list of output lines to return
+        entries = []
+        nodes = list(passage.layer(layer0.LAYER_ID).all)
+        node_to_id = defaultdict(self._IdGenerator())
+        while nodes:
+            next_nodes = []
+            for node in nodes:
+                if node.ID in node_to_id:
+                    continue
+                children = [child for child in node.children if
+                            child.layer.ID != layer0.LAYER_ID and child.ID not in node_to_id]
+                if children:
+                    next_nodes += children
+                    continue
+                incoming = list(islice(sorted(node.incoming,  # non-remote non-linkage first
+                                              key=lambda e: (e.attrib.get("remote", False),
+                                                             e.tag in (EdgeTags.LinkRelation,
+                                                                       EdgeTags.LinkArgument))),
+                                       1 if tree else None))  # all or just one
+                next_nodes += [e.parent for e in incoming]
+                # word/id, (POS) tag, morph tag, edge, parent, [second edge, second parent]*
+                identifier = node.text if node.layer.ID == layer0.LAYER_ID else ("#" + node_to_id[node.ID])
+                fields = [identifier, node.tag, "--"]
+                if not test:  # append two elements for each edge: (edge tag, parent ID)
+                    fields += sum([(e.tag + ("*" if e.attrib.get("remote") else ""), e.parent.ID)
+                                   for e in incoming], ()) or ("--", 0)
+                entries.append(fields)
+            if test:  # do not print non-terminal nodes
+                break
+            nodes = next_nodes
+        for fields in entries:  # correct from source standard ID to generated node IDs
+            for i in range(4, len(fields), 2):
+                fields[i] = node_to_id.get(fields[i], 0)
+        lines.append("\n".join("\t".join(str(field) for field in entry)
+                               for entry in entries))
+        lines.append("#EOS %s" % passage.ID)
+        return "\n".join(lines)
 
 
-def from_conll(lines, passage_id):
+def from_conll(lines, passage_id, split=False):
     """Converts from parsed text in CoNLL format to a Passage object.
 
     :param lines: a multi-line string in CoNLL format, describing a single passage.
     :param passage_id: ID to set for passage
+    :param split: split each sentence to its own passage
 
     :return a Passage object.
     """
-    return ConllConverter.from_dependency(lines, passage_id)
+    return ConllConverter().from_format(lines, passage_id)
 
 
 def to_conll(passage, test=False, *args, **kwargs):
@@ -1146,18 +1302,19 @@ def to_conll(passage, test=False, *args, **kwargs):
     :return a multi-line string representing the dependencies in the passage
     """
     del args, kwargs
-    return ConllConverter.to_dependency(passage, test)
+    return ConllConverter().to_format(passage, test)
 
 
-def from_sdp(lines, passage_id):
+def from_sdp(lines, passage_id, split=False):
     """Converts from parsed text in SemEval 2015 SDP format to a Passage object.
 
     :param lines: a multi-line string in SDP format, describing a single passage.
     :param passage_id: ID to set for passage
+    :param split: split each sentence to its own passage
 
     :return a Passage object.
     """
-    return SdpConverter.from_dependency(lines, passage_id)
+    return SdpConverter().from_format(lines, passage_id)
 
 
 def to_sdp(passage, test=False, *args, **kwargs):
@@ -1169,89 +1326,19 @@ def to_sdp(passage, test=False, *args, **kwargs):
     :return a multi-line string representing the semantic dependencies in the passage
     """
     del args, kwargs
-    return SdpConverter.to_dependency(passage, test)
+    return SdpConverter().to_format(passage, test)
 
 
-def from_export(lines, passage_id=None):
+def from_export(lines, passage_id=None, split=False):
     """Converts from parsed text in NeGra export format to a Passage object.
 
     :param lines: a multi-line string in NeGra export format, describing a single passage.
     :param passage_id: ID to set for passage, overriding the ID from the file
+    :param split: split each sentence to its own passage
 
-    :return a Passage object.
+    :return generator of Passage objects.
     """
-
-    line_iterator = iter(lines)
-    try:
-        line = next(line_iterator)
-    except StopIteration:
-        raise ValueError("Empty input file")
-    m = re.match("#BOS\s+(\d+).*", line)
-    assert m, "Invalid first line: " + line
-    if passage_id is None:
-        passage_id = m.group(1)
-
-    p = core.Passage(passage_id)
-    l0 = layer0.Layer0(p)
-    l1 = layer1.Layer1(p)
-    paragraph = 1
-    node_by_id = {}
-    pending_nodes = []
-    remotes = []
-    linkages = defaultdict(list)
-    terminals = []
-    node_ids_with_children = set()
-
-    while line_iterator:
-        line = next(line_iterator)
-        fields = line.split()
-        if fields[0].startswith("#EOS"):
-            break
-        m = re.match("#(\d+)", fields[0])
-        if not m:
-            parent_id = fields[4]
-            node_ids_with_children.add(parent_id)
-            terminals.append(fields[:5])
-            continue
-        node_id = m.group(1)
-        for edge_tag, parent_id in zip(fields[3::2], fields[4::2]):
-            node_ids_with_children.add(parent_id)
-            if parent_id == "0":
-                node_by_id[node_id] = None
-            elif edge_tag.endswith("*"):
-                remotes.append((parent_id, edge_tag.rstrip("*"), node_id))
-            elif edge_tag in (EdgeTags.LinkArgument, EdgeTags.LinkRelation):
-                linkages[parent_id].append((node_id, edge_tag))
-            else:
-                pending_nodes.append((parent_id, edge_tag, node_id))
-
-    # add normal nodes
-    while pending_nodes:
-        for i in reversed(range(len(pending_nodes))):
-            parent_id, edge_tag, node_id = pending_nodes[i]
-            parent = node_by_id.get(parent_id, -1)
-            if parent != -1:
-                del pending_nodes[i]
-                node_by_id[node_id] = l1.add_fnode(parent, edge_tag,
-                                                   implicit=node_id not in node_ids_with_children)
-
-    # add remotes
-    for parent_id, edge_tag, node_id in remotes:
-        l1.add_remote(node_by_id[parent_id], edge_tag, node_by_id[node_id])
-
-    # add linkages
-    for node_id, children in linkages.items():
-        link_relation = next(node_by_id[i] for i, t in children if t == EdgeTags.LinkRelation)
-        link_arguments = [node_by_id[i] for i, t in children if t == EdgeTags.LinkArgument]
-        l1.add_linkage(link_relation, *link_arguments)
-
-    # add terminals
-    for text, tag, _, edge_tag, parent_id in terminals:
-        punctuation = (tag == layer0.NodeTags.Punct)
-        terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
-        node_by_id[parent_id].add(edge_tag, terminal)
-
-    return p
+    return ExportConverter().from_format(lines, passage_id, split)
 
 
 def to_export(passage, test=False, tree=False):
@@ -1263,52 +1350,7 @@ def to_export(passage, test=False, tree=False):
 
     :return a multi-line string representing a (discontinuous) tree structure constructed from the passage
     """
-
-    class _IdGenerator:
-        def __init__(self):
-            self._id = 499
-
-        def __call__(self):
-            self._id += 1
-            return str(self._id)
-
-    lines = ["#BOS %s" % passage.ID]  # list of output lines to return
-    entries = []
-    nodes = list(passage.layer(layer0.LAYER_ID).all)
-    node_to_id = defaultdict(_IdGenerator())
-    while nodes:
-        next_nodes = []
-        for node in nodes:
-            if node.ID in node_to_id:
-                continue
-            children = [child for child in node.children if
-                        child.layer.ID != layer0.LAYER_ID and child.ID not in node_to_id]
-            if children:
-                next_nodes += children
-                continue
-            incoming = list(islice(sorted(node.incoming,  # non-remote non-linkage first
-                                          key=lambda e: (e.attrib.get("remote", False),
-                                                         e.tag in (EdgeTags.LinkRelation,
-                                                                   EdgeTags.LinkArgument))),
-                                   1 if tree else None))  # all or just one
-            next_nodes += [e.parent for e in incoming]
-            # word/id, (POS) tag, morph tag, edge, parent, [second edge, second parent]*
-            identifier = node.text if node.layer.ID == layer0.LAYER_ID else ("#" + node_to_id[node.ID])
-            fields = [identifier, node.tag, "--"]
-            if not test:  # append two elements for each edge: (edge tag, parent ID)
-                fields += sum([(e.tag + ("*" if e.attrib.get("remote") else ""), e.parent.ID)
-                               for e in incoming], ()) or ("--", 0)
-            entries.append(fields)
-        if test:  # do not print non-terminal nodes
-            break
-        nodes = next_nodes
-    for fields in entries:  # correct from source standard ID to generated node IDs
-        for i in range(4, len(fields), 2):
-            fields[i] = node_to_id.get(fields[i], 0)
-    lines.append("\n".join("\t".join(str(field) for field in entry)
-                           for entry in entries))
-    lines.append("#EOS %s" % passage.ID)
-    return "\n".join(lines)
+    return ExportConverter().to_format(passage, test, tree)
 
 
 def split2sentences(passage, remarks=False):

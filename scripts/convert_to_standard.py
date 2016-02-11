@@ -16,28 +16,20 @@ Each passage is written to the file:
 """
 
 
-def convert_file(filename, passage_id, converter):
-    """Opens a text file and returns its parsed Passage objects after conversion
-    :param filename: input file
-    :param passage_id: required for created passages (not specified in file)
-    :param converter: function to use for conversion
-    """
-    with open(filename) as f:
-        return converter(f, passage_id)
-
-
 def main():
     argparser = argparse.ArgumentParser(description=desc)
     argparser.add_argument("filenames", nargs="+",
-                        help="CoNLL file names to convert")
+                           help="CoNLL file names to convert")
     argparser.add_argument("-f", "--format", choices=("conll", "sdp", "export", "txt"),
-                        default="conll", help="input file format")
+                           default="conll", help="input file format")
     argparser.add_argument("-o", "--outdir", default=".",
-                        help="output directory")
-    argparser.add_argument("-p", "--prefix", default="ucca_passage",
-                        help="output filename prefix")
+                           help="output directory")
+    argparser.add_argument("-p", "--prefix", default="",
+                           help="output filename prefix")
     argparser.add_argument("-b", "--binary", action="store_true",
-                        help="write in pickle binary format (.pickle)")
+                           help="write in pickle binary format (.pickle)")
+    argparser.add_argument("-s", "--split", action="store_true",
+                           help="split each sentence to its own passage")
     args = argparser.parse_args()
 
     if args.format == "conll":
@@ -50,18 +42,22 @@ def main():
         converter = convert.from_text
 
     for pattern in args.filenames:
-        for filename in glob.glob(pattern):
+        filenames = glob.glob(pattern)
+        if not filenames:
+            raise IOError("Not found: " + pattern)
+        for filename in filenames:
             basename = os.path.basename(filename)
             try:
                 passage_id = re.search(r"\d+", basename).group(0)
             except AttributeError:
                 passage_id = basename
-            passage = convert_file(filename, passage_id, converter)
 
-            outfile = "%s/%s%s.%s" % (args.outdir, args.prefix, passage.ID,
-                                      "pickle" if args.binary else "xml")
-            sys.stderr.write("Writing '%s'...\n" % outfile)
-            passage2file(passage, outfile, args.binary)
+            with open(filename) as f:
+                for passage in converter(f, passage_id, args.split):
+                    outfile = "%s/%s.%s" % (args.outdir, args.prefix + passage.ID,
+                                            "pickle" if args.binary else "xml")
+                    sys.stderr.write("Writing '%s'...\n" % outfile)
+                    passage2file(passage, outfile, args.binary)
 
     sys.exit(0)
 
