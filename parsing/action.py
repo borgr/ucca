@@ -1,6 +1,6 @@
 import re
 
-from parser.config import Config
+from parsing.config import Config
 from ucca.layer1 import EdgeTags
 
 

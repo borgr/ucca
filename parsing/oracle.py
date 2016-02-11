@@ -1,6 +1,6 @@
-from parser.action import Action, Actions
-from parser.config import Config
-from parser.constants import ROOT_ID
+from parsing.action import Action, Actions
+from parsing.config import Config
+from parsing.constants import ROOT_ID
 from ucca import layer1
 
 

@@ -1,7 +1,7 @@
 from collections import deque
 from operator import attrgetter
 
-from parser.config import Config
+from parsing.config import Config
 from ucca import core, layer0
 from ucca.layer1 import EdgeTags
 

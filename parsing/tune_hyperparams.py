@@ -2,8 +2,8 @@ import os
 
 import numpy as np
 
-import parser.parse
-from parser.config import Config
+import parsing.parse
+from parsing.config import Config
 from ucca.evaluation import UNLABELED, WEAK_LABELED, LABELED
 
 
@@ -19,7 +19,7 @@ class Hyperparams(object):
         print("Running with %s" % self)
         Config().learning_rate = self.learning_rate
         Config().decay_factor = self.decay_factor
-        self.scores = parser.main()
+        self.scores = parse.main()
         assert self.score is not None, "parser failed to produce score"
 
     def score(self):

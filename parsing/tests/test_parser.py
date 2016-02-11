@@ -2,8 +2,8 @@
 
 import unittest
 
-from parser.oracle import Oracle
-from parser.state import State
+from parsing.oracle import Oracle
+from parsing.state import State
 from ucca import convert
 from ucca.tests.test_ucca import TestUtil
 
