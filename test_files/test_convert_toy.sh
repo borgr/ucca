@@ -2,7 +2,7 @@
 
 cd $(dirname $0)
 mkdir -p converted
-for format in conll sdp export; do
+for format in conll sdp export txt; do
     if [ $# -lt 1 -o "$format" = "$1" ]; then
         python3 ../scripts/convert_from_standard.py ../doc/toy.xml -f $format -o converted || exit 1
         python3 ../scripts/convert_to_standard.py converted/ucca_passage504.$format -f $format -o converted -p "ucca_passage" || exit 1

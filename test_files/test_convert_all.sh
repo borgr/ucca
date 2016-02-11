@@ -3,7 +3,7 @@ set -x
 
 cd $(dirname $0)
 mkdir -p converted
-for format in conll sdp export; do
+for format in conll sdp export txt; do
     if [ $# -lt 1 -o "$format" = "$1" ]; then
         for passage in ../pickle/*.pickle; do
             base=$(basename $passage .pickle)

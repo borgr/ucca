@@ -681,6 +681,7 @@ def from_text(text, passage_id='1', split=False):
         if p is None:
             p = core.Passage(passage_id)
             l0 = layer0.Layer0(p)
+            layer1.Layer1(p)
         for token in par.split():
             # i is paragraph index, but it starts with 0, so we need to add +1
             l0.add_terminal(text=token, punct=is_punctuation(token),
@@ -692,7 +693,7 @@ def from_text(text, passage_id='1', split=False):
         yield p
 
 
-def to_text(passage, sentences=True):
+def to_text(passage, sentences=True, *args, **kwargs):
     """Converts from a Passage object to tokenized strings.
 
     :param passage: the Passage object to convert
@@ -701,6 +702,7 @@ def to_text(passage, sentences=True):
 
     :return a list of strings - 1 if sentences=False, # of sentences otherwise
     """
+    del args, kwargs
     tokens = [x.text for x in sorted(passage.layer(layer0.LAYER_ID).all,
                                      key=operator.attrgetter('position'))]
     # break2sentences return the positions of the end tokens, which is
@@ -957,7 +959,7 @@ class DependencyConverter(FormatConverter):
         :param passage: the Passage object to convert
         :param test: whether to omit the head and deprel columns. Defaults to False
 
-        :return a multi-line string representing the dependencies in the passage
+        :return a list of strings representing the dependencies in the passage
         """
         _TAG_PRIORITY = [    # ordered list of edge labels for head selection
             EdgeTags.Center,
@@ -1057,9 +1059,9 @@ class DependencyConverter(FormatConverter):
                        key=lambda e: (not e.remote, e.rel != EdgeTags.Linker))
             edge.remove()
 
-        lines.append("\n".join("\t".join(str(field) for field in entry)
-                               for entry in self.generate(dep_nodes, test)))  # different for each subclass
-        return "\n".join(lines)
+        lines += ["\t".join(str(field) for field in entry)
+                  for entry in self.generate(dep_nodes, test)]  # different for each subclass
+        return lines
 
 
 class ConllConverter(DependencyConverter):
@@ -1282,16 +1284,15 @@ class ExportConverter(FormatConverter):
         for fields in entries:  # correct from source standard ID to generated node IDs
             for i in range(4, len(fields), 2):
                 fields[i] = node_to_id.get(fields[i], 0)
-        lines.append("\n".join("\t".join(str(field) for field in entry)
-                               for entry in entries))
-        lines.append("#EOS %s" % passage.ID)
-        return "\n".join(lines)
+        lines += ["\t".join(str(field) for field in entry) for entry in entries] +\
+                 ["#EOS %s" % passage.ID]
+        return lines
 
 
 def from_conll(lines, passage_id, split=False):
     """Converts from parsed text in CoNLL format to a Passage object.
 
-    :param lines: a multi-line string in CoNLL format, describing a single passage.
+    :param lines: iterable of lines in CoNLL format, describing a single passage.
     :param passage_id: ID to set for passage
     :param split: split each sentence to its own passage
 
@@ -1306,7 +1307,7 @@ def to_conll(passage, test=False, *args, **kwargs):
     :param passage: the Passage object to convert
     :param test: whether to omit the head and deprel columns. Defaults to False
 
-    :return a multi-line string representing the dependencies in the passage
+    :return list of lines representing the dependencies in the passage
     """
     del args, kwargs
     return ConllConverter().to_format(passage, test)
@@ -1315,7 +1316,7 @@ def to_conll(passage, test=False, *args, **kwargs):
 def from_sdp(lines, passage_id, split=False):
     """Converts from parsed text in SemEval 2015 SDP format to a Passage object.
 
-    :param lines: a multi-line string in SDP format, describing a single passage.
+    :param lines: iterable of lines in SDP format, describing a single passage.
     :param passage_id: ID to set for passage
     :param split: split each sentence to its own passage
 
@@ -1330,7 +1331,7 @@ def to_sdp(passage, test=False, *args, **kwargs):
     :param passage: the Passage object to convert
     :param test: whether to omit the top, head, frame, etc. columns. Defaults to False
 
-    :return a multi-line string representing the semantic dependencies in the passage
+    :return list of lines representing the semantic dependencies in the passage
     """
     del args, kwargs
     return SdpConverter().to_format(passage, test)
@@ -1339,7 +1340,7 @@ def to_sdp(passage, test=False, *args, **kwargs):
 def from_export(lines, passage_id=None, split=False):
     """Converts from parsed text in NeGra export format to a Passage object.
 
-    :param lines: a multi-line string in NeGra export format, describing a single passage.
+    :param lines: iterable of lines in NeGra export format, describing a single passage.
     :param passage_id: ID to set for passage, overriding the ID from the file
     :param split: split each sentence to its own passage
 
@@ -1355,7 +1356,7 @@ def to_export(passage, test=False, tree=False):
     :param test: whether to omit the edge and parent columns. Defaults to False
     :param tree: whether to omit columns for non-primary parents. Defaults to False
 
-    :return a multi-line string representing a (discontinuous) tree structure constructed from the passage
+    :return list of lines representing a (discontinuous) tree structure constructed from the passage
     """
     return ExportConverter().to_format(passage, test, tree)
 

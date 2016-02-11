@@ -21,7 +21,7 @@ def convert_passage(filename, converter, args):
     """
     passage = file2passage(filename)
     passages = convert.split2sentences(passage) if args.sentences else [passage]
-    output = "\n".join(converter(p, args.test, args.tree) for p in passages)
+    output = "\n".join(line for p in passages for line in converter(p, args.test, args.tree))
     return output, passage.ID
 
 

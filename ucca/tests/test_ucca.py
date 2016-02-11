@@ -571,8 +571,8 @@ class ConversionTests(unittest.TestCase):
         converted = convert.to_conll(passage)
         with open('test_files/standard3.conll') as f:
             # f.write(converted)
-            self.assertSequenceEqual(converted, f.read())
-        converted_passage = next(convert.from_conll(converted.split("\n"), passage.ID))
+            self.assertSequenceEqual(converted, f.read().splitlines() + [""])
+        converted_passage = next(convert.from_conll(converted, passage.ID))
         # ioutil.passage2file(converted_passage, 'test_files/standard3.conll.xml')
         ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.conll.xml'))
         self.assertTrue(converted_passage.equals(ref))
@@ -582,8 +582,8 @@ class ConversionTests(unittest.TestCase):
         converted = convert.to_sdp(passage)
         with open('test_files/standard3.sdp') as f:
             # f.write(converted)
-            self.assertSequenceEqual(converted, f.read())
-        converted_passage = next(convert.from_sdp(converted.split("\n"), passage.ID))
+            self.assertSequenceEqual(converted, f.read().splitlines() + [""])
+        converted_passage = next(convert.from_sdp(converted, passage.ID))
         # ioutil.passage2file(converted_passage, 'test_files/standard3.sdp.xml')
         ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.sdp.xml'))
         self.assertTrue(converted_passage.equals(ref))
@@ -593,8 +593,8 @@ class ConversionTests(unittest.TestCase):
         converted = convert.to_export(passage)
         with open('test_files/standard3.export') as f:
             # f.write(converted)
-            self.assertSequenceEqual(converted, f.read())
-        converted_passage = next(convert.from_export(converted.split("\n"), passage.ID))
+            self.assertSequenceEqual(converted, f.read().splitlines())
+        converted_passage = next(convert.from_export(converted, passage.ID))
         # ioutil.passage2file(converted_passage, 'test_files/standard3.export.xml')
         ref = convert.from_standard(TestUtil.load_xml('test_files/standard3.export.xml'))
         self.assertTrue(converted_passage.equals(ref))
