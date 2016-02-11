@@ -11,10 +11,10 @@ desc = """Parses an XML in UCCA standard format, and writes it as a linearized s
 
 
 def main():
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('filenames', nargs='+', help="XML file names to convert")
-    parser.add_argument('-o', '--outfile', help="output file for sequence")
-    args = parser.parse_args()
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument('filenames', nargs='+', help="XML file names to convert")
+    argparser.add_argument('-o', '--outfile', help="output file for sequence")
+    args = argparser.parse_args()
 
     handle = open(args.outfile, 'w') if args.outfile else sys.stdout
     for filename in args.filenames:

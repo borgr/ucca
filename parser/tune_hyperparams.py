@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-import parser.parser
+import parser.parse
 from parser.config import Config
 from ucca.evaluation import UNLABELED, WEAK_LABELED, LABELED
 

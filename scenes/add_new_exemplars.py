@@ -23,16 +23,16 @@ def extend_labels(old_labels, new_scores, threshold):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('orig', type=argparse.FileType('rb'),
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('orig', type=argparse.FileType('rb'),
                         help='Original targets and labels pickle file')
-    parser.add_argument('new', type=argparse.FileType('r'),
+    argparser.add_argument('new', type=argparse.FileType('r'),
                         help='New targets and scores, tab-separated')
-    parser.add_argument('out', type=argparse.FileType('wb'),
+    argparser.add_argument('out', type=argparse.FileType('wb'),
                         help='New output targets and labels pickle file')
-    parser.add_argument('--threshold', type=float, default=0,
+    argparser.add_argument('--threshold', type=float, default=0,
                         help='Threshold above it a target is labeled as 1')
-    args = parser.parse_args()
+    args = argparser.parse_args()
 
     old_targets, old_labels = pickle.load(args.orig)
     args.orig.close()

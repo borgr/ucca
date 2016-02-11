@@ -80,27 +80,27 @@ def run_bl_evaluation(orig_targets, orig_labels, orig_fmat, ratio, coll, wikt):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('labels', type=argparse.FileType('rb'))
-    parser.add_argument('fmat', type=argparse.FileType('rb'))
-    parser.add_argument('method', choices=('bl', 'c_svc', 'nu_svc_linear',
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('labels', type=argparse.FileType('rb'))
+    argparser.add_argument('fmat', type=argparse.FileType('rb'))
+    argparser.add_argument('method', choices=('bl', 'c_svc', 'nu_svc_linear',
                                            'nu_svc_sigmoid', 'lr', 'gboost'),
                         help='classification method')
-    parser.add_argument('--detailed', action='store_true')
-    parser.add_argument('--collins', help='path to collins dict in pickle')
-    parser.add_argument('--wiktionary', help='path to wiktionary defs')
-    parser.add_argument('--ratio', type=float, default=2)
-    parser.add_argument('--runs', type=int, default=1,
+    argparser.add_argument('--detailed', action='store_true')
+    argparser.add_argument('--collins', help='path to collins dict in pickle')
+    argparser.add_argument('--wiktionary', help='path to wiktionary defs')
+    argparser.add_argument('--ratio', type=float, default=2)
+    argparser.add_argument('--runs', type=int, default=1,
                         help='times to run evaluation and average')
-    parser.add_argument('-c', type=float, default=1,
+    argparser.add_argument('-c', type=float, default=1,
                         help='C parameter for c_svc')
-    parser.add_argument('--nu', type=float, default=0.5,
+    argparser.add_argument('--nu', type=float, default=0.5,
                         help='nu parameter for nu_svc*')
-    parser.add_argument('--learnrate', type=float, default=0.1,
+    argparser.add_argument('--learnrate', type=float, default=0.1,
                         help='learning (shrinkage) rate for GB')
-    parser.add_argument('--nestimators', type=int, default=100,
+    argparser.add_argument('--nestimators', type=int, default=100,
                         help='number of estimators for GB')
-    args = parser.parse_args()
+    args = argparser.parse_args()
 
     orig_targets, orig_labels, orig_fmat = get_data_objects(args.labels,
                                                             args.fmat)

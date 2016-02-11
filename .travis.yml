@@ -10,7 +10,7 @@ before_script:
 #  - curl -O http://www.cs.huji.ac.il/~danielh/ucca/ucca_corpus_pickle.tgz
 #  - mkdir pickle
 #  - tar xvzf ucca_corpus_pickle.tgz -C pickle
-#  - python scripts/split.py pickle
+#  - python scripts/split_corpus.py pickle
   - python setup.py install
   - python -m nltk.downloader averaged_perceptron_tagger punkt
 # command to run tests
@@ -18,13 +18,13 @@ script:
   - python -m unittest discover -v
   - test_files/test_convert_toy.sh
 #  - test_files/test_convert_all.sh
-  - python parser/parser.py -I 10 -t doc/toy.xml -d doc/toy.xml -vm model_toy
-  - python parser/parser.py doc/toy.xml -vm model_toy
-  - python parser/parser.py -I 10 -t doc/toy.xml -d doc/toy.xml -svm model_toy_sentences
-  - python parser/parser.py doc/toy.xml -svm model_toy_sentences
-  - python parser/parser.py -I 10 -t doc/toy.xml -d doc/toy.xml -avm model_toy_paragraphs
-  - python parser/parser.py doc/toy.xml -svm model_toy_paragraphs
+  - python parser/parse.py -I 10 -t doc/toy.xml -d doc/toy.xml -vm model_toy
+  - python parser/parse.py doc/toy.xml -vm model_toy
+  - python parser/parse.py -I 10 -t doc/toy.xml -d doc/toy.xml -svm model_toy_sentences
+  - python parser/parse.py doc/toy.xml -svm model_toy_sentences
+  - python parser/parse.py -I 10 -t doc/toy.xml -d doc/toy.xml -avm model_toy_paragraphs
+  - python parser/parse.py doc/toy.xml -svm model_toy_paragraphs
 # Uncomment this to train on the full training set (takes ~30 minutes):
-#  - python parser/parser.py -t pickle/train -d pickle/dev -bm model
+#  - python parser/parse.py -t pickle/train -d pickle/dev -bm model
 # Uncomment this to test on the full test set:
-#  - python parser/parser.py pickle/test -bm model
+#  - python parser/parse.py pickle/test -bm model

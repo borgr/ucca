@@ -10,10 +10,10 @@ desc = """Parses an XML in UCCA standard format, and writes them in binary Pickl
 
 
 def main():
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('filenames', nargs='+', help="XML file names to convert")
-    parser.add_argument('-o', '--outdir', default='.', help="output directory")
-    args = parser.parse_args()
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument('filenames', nargs='+', help="XML file names to convert")
+    argparser.add_argument('-o', '--outdir', default='.', help="output directory")
+    args = argparser.parse_args()
 
     for filename in args.filenames:
         sys.stderr.write("Reading passage '%s'...\n" % filename)

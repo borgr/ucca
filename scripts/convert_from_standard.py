@@ -26,23 +26,23 @@ def convert_passage(filename, converter, args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument("filenames", nargs="+",
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument("filenames", nargs="+",
                         help="passage file names to convert")
-    parser.add_argument("-f", "--format", choices=("conll", "sdp", "export", "txt"),
+    argparser.add_argument("-f", "--format", choices=("conll", "sdp", "export", "txt"),
                         default="conll", help="output file format")
-    parser.add_argument("-o", "--outdir", default=".",
+    argparser.add_argument("-o", "--outdir", default=".",
                         help="output directory")
-    parser.add_argument("-p", "--prefix", default="ucca_passage",
+    argparser.add_argument("-p", "--prefix", default="ucca_passage",
                         help="output filename prefix")
-    parser.add_argument("-t", "--test", action="store_true",
+    argparser.add_argument("-t", "--test", action="store_true",
                         help="omit prediction columns (head and deprel for conll; "
                              "top, pred, frame, etc. for sdp)")
-    parser.add_argument("-s", "--sentences", action="store_true",
+    argparser.add_argument("-s", "--sentences", action="store_true",
                         help="split passages to sentences")
-    parser.add_argument("-T", "--tree", action="store_true",
+    argparser.add_argument("-T", "--tree", action="store_true",
                         help="remove multiple parents to get a tree")
-    args = parser.parse_args()
+    args = argparser.parse_args()
 
     if args.format == "conll":
         converter = convert.to_conll

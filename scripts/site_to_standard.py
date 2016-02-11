@@ -39,25 +39,25 @@ def db2passage(handle, pid, user):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('filename', nargs='?', help="XML file name to convert")
-    parser.add_argument('-o', '--outfile', help="output file for standard XML")
-    parser.add_argument('-b', '--binary', help="output file for binary pickel")
-    parser.add_argument('-d', '--db', help="DB file to get input from")
-    parser.add_argument('-p', '--pid', type=int, help="PassageID to query DB")
-    parser.add_argument('-u', '--user', help="Username to DB query")
-    args = parser.parse_args()
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument('filename', nargs='?', help="XML file name to convert")
+    argparser.add_argument('-o', '--outfile', help="output file for standard XML")
+    argparser.add_argument('-b', '--binary', help="output file for binary pickel")
+    argparser.add_argument('-d', '--db', help="DB file to get input from")
+    argparser.add_argument('-p', '--pid', type=int, help="PassageID to query DB")
+    argparser.add_argument('-u', '--user', help="Username to DB query")
+    args = argparser.parse_args()
 
     # Checking for illegal combinations
     if args.db and args.filename:
-        parser.error("Only one source, XML or DB file, can be used")
+        argparser.error("Only one source, XML or DB file, can be used")
     if (not args.db) and (not args.filename):
-        parser.error("Must specify one source, XML or DB file")
+        argparser.error("Must specify one source, XML or DB file")
     if args.db and not (args.pid and args.user):
-        parser.error("Must specify a username and a passage ID when " +
+        argparser.error("Must specify a username and a passage ID when " +
                      "using DB file option")
     if (args.pid or args.user) and not args.db:
-        parser.error("Can't use user and passage ID options without DB file")
+        argparser.error("Can't use user and passage ID options without DB file")
 
     if args.filename:
         passage = site2passage(args.filename)

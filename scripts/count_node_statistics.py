@@ -19,11 +19,11 @@ desc = """Prints statistics on UCCA passages
 
 
 def main():
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument("-f", "--filenames", nargs="+", help="files to process")
-    parser.add_argument("-o", "--outfile", default="data/stats.txt", help="output file for data")
-    parser.add_argument("-i", "--infile", default="data/stats.txt", help="input file for data")
-    args = parser.parse_args()
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument("-f", "--filenames", nargs="+", help="files to process")
+    argparser.add_argument("-o", "--outfile", default="data/stats.txt", help="output file for data")
+    argparser.add_argument("-i", "--infile", default="data/stats.txt", help="input file for data")
+    args = argparser.parse_args()
 
     if args.filenames:
         ids = []

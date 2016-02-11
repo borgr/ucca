@@ -294,28 +294,28 @@ def print_progress(current, updated=[0]):
 
 def parse_cmd():
     """Parses and validates cmd line arguments, then return them."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=('ngrams', 'counts', 'morph'))
-    parser.add_argument('action', choices=('extract', 'filter', 'merge',
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('command', choices=('ngrams', 'counts', 'morph'))
+    argparser.add_argument('action', choices=('extract', 'filter', 'merge',
                                            'score', 'context'))
-    parser.add_argument('--ngram_size', type=int, default=1)
-    parser.add_argument('--sort', action='store_true')
-    parser.add_argument('--exclude')
-    parser.add_argument('--all', action='store_true')
-    parser.add_argument('--lemmatize', action='store_true')
-    parser.add_argument('--threshold', type=int, default=1)
-    parser.add_argument('--startswith')
-    parser.add_argument('--endswith')
-    parser.add_argument('--targets')
-    parser.add_argument('--featurewords')
-    parser.add_argument('--position', type=int, default=0)
-    parser.add_argument('--suffixes')
-    parser.add_argument('--prefixes')
-    parser.add_argument('--collins')
-    parser.add_argument('--wiktionary')
-    parser.add_argument('--hfw')
+    argparser.add_argument('--ngram_size', type=int, default=1)
+    argparser.add_argument('--sort', action='store_true')
+    argparser.add_argument('--exclude')
+    argparser.add_argument('--all', action='store_true')
+    argparser.add_argument('--lemmatize', action='store_true')
+    argparser.add_argument('--threshold', type=int, default=1)
+    argparser.add_argument('--startswith')
+    argparser.add_argument('--endswith')
+    argparser.add_argument('--targets')
+    argparser.add_argument('--featurewords')
+    argparser.add_argument('--position', type=int, default=0)
+    argparser.add_argument('--suffixes')
+    argparser.add_argument('--prefixes')
+    argparser.add_argument('--collins')
+    argparser.add_argument('--wiktionary')
+    argparser.add_argument('--hfw')
 
-    args = parser.parse_args()
+    args = argparser.parse_args()
     if args.exclude:
         with open(args.exclude) as f:
             tokens = f.readlines()

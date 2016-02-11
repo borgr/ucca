@@ -13,10 +13,10 @@ desc = """Parses XML files in UCCA standard format, and count the number of disc
 
 
 def main():
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('filenames', nargs='+', help="XML file names to convert")
-    parser.add_argument('-o', '--outfile', help="output file for count")
-    args = parser.parse_args()
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument('filenames', nargs='+', help="XML file names to convert")
+    argparser.add_argument('-o', '--outfile', help="output file for count")
+    args = argparser.parse_args()
 
     all_nodes = 0
     layer0_nodes = 0

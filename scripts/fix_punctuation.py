@@ -13,9 +13,9 @@ desc = """Load UCCA passages and write back with correct layer 0 node tags accor
 
 
 def main():
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('directory', help="directory containing XML files to process")
-    args = parser.parse_args()
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument('directory', help="directory containing XML files to process")
+    args = argparser.parse_args()
 
     passages = glob.glob(args.directory + "/*.xml")
     for filename in passages:

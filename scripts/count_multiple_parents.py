@@ -48,13 +48,13 @@ def plot_pie(counter, label, plot=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('filenames', nargs='+', help="file names to analyze")
-    parser.add_argument('-o', '--outfile', default="data/counts_",
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument('filenames', nargs='+', help="file names to analyze")
+    argparser.add_argument('-o', '--outfile', default="data/counts_",
                         help="output file prefix for histogram")
-    parser.add_argument('-p', '--plot', default="data/plot_",
+    argparser.add_argument('-p', '--plot', default="data/plot_",
                         help="output file prefix for plot image file")
-    args = parser.parse_args()
+    args = argparser.parse_args()
 
     histograms = defaultdict(Counter)
     for pattern in args.filenames:

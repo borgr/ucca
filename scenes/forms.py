@@ -7,19 +7,19 @@ from ucca import convert
 
 def main():
     """Runs FormsIdentifier and gathers statistics."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument('filename', nargs='*',
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('filename', nargs='*',
                         help="Site XML files to operate on")
-    parser.add_argument(
+    argparser.add_argument(
         '-c', '--collins',
         default='/home/beka/thesis/resources/collins/collins.pickle',
         help="Collins parsed dictionary in pickle file")
-    parser.add_argument(
+    argparser.add_argument(
         '-w', '--wiktionary',
         default='/home/beka/thesis/resources/enwikt-defs-latest-en.tsv',
         help="Wiktionary definitions only in tab-separated format")
 
-    args = parser.parse_args()
+    args = argparser.parse_args()
     eng = lex.FormIdentifier(args.collins, args.wiktionary)
     for path in args.filename:
         run_file(path, eng)

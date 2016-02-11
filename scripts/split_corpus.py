@@ -49,15 +49,15 @@ def split_passages(directory, train=TRAIN_DEFAULT, dev=DEV_DEFAULT, link=False):
     print()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument("directory", default=".", nargs="?",
-                        help="directory to split (default: current directory)")
-    parser.add_argument("-t", "--train", default=TRAIN_DEFAULT,
-                        help="size of train split (default: %d)" % TRAIN_DEFAULT)
-    parser.add_argument("-d", "--dev", default=DEV_DEFAULT,
-                        help="size of dev split (default: %d)" % DEV_DEFAULT)
-    parser.add_argument("-l", "--link", action="store_true",
-                        help="create symbolic link instead of copying")
-    args = parser.parse_args()
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument("directory", default=".", nargs="?",
+                           help="directory to split (default: current directory)")
+    argparser.add_argument("-t", "--train", default=TRAIN_DEFAULT,
+                           help="size of train split (default: %d)" % TRAIN_DEFAULT)
+    argparser.add_argument("-d", "--dev", default=DEV_DEFAULT,
+                           help="size of dev split (default: %d)" % DEV_DEFAULT)
+    argparser.add_argument("-l", "--link", action="store_true",
+                           help="create symbolic link instead of copying")
+    args = argparser.parse_args()
 
     split_passages(args.directory, args.train, args.dev, link=args.link)

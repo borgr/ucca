@@ -13,8 +13,7 @@ from parser.config import Config
 from parser.features import FeatureExtractor
 from parser.oracle import Oracle
 from parser.state import State
-from ucca import core, layer0, layer1, convert, ioutil, diffutil
-from ucca.evaluation import evaluate, Scores
+from ucca import core, layer0, layer1, convert, ioutil, diffutil, evaluation
 
 
 class ParserException(Exception):
@@ -68,11 +67,11 @@ class Parser(object):
             if dev:
                 print("Evaluating on dev passages")
                 dev, scores = zip(*[((passage, passage_id),
-                                     evaluate(predicted_passage, passage,
-                                              verbose=False, units=False, errors=False))
+                                     evaluation.evaluate(predicted_passage, passage,
+                                                         verbose=False, units=False, errors=False))
                                     for predicted_passage, passage, passage_id in
                                     self.parse(dev, mode="dev")])
-                score = Scores.aggregate(scores).average_f1()
+                score = evaluation.Scores.aggregate(scores).average_f1()
                 print("Average F1 score on dev: %.3f" % score)
                 if score >= best_score:
                     print("Better than previous best score (%.3f)" % best_score)
@@ -350,21 +349,21 @@ def write_passage(passage, outdir, prefix, binary, verbose):
 
 def train_test(train_passages, dev_passages, test_passages, args):
     scores = None
-    parser = Parser(args.model)
-    parser.train(train_passages, dev=dev_passages, iterations=args.iterations)
+    p = Parser(args.model)
+    p.train(train_passages, dev=dev_passages, iterations=args.iterations)
     if test_passages:
         if args.train:
             print("Evaluating on test passages")
         passage_scores = []
-        for guessed_passage, ref_passage, _ in parser.parse(test_passages):
+        for guessed_passage, ref_passage, _ in p.parse(test_passages):
             if isinstance(ref_passage, core.Passage):
-                passage_scores.append(evaluate(guessed_passage, ref_passage,
-                                               verbose=args.verbose and guessed_passage is not None))
+                passage_scores.append(evaluation.evaluate(guessed_passage, ref_passage,
+                                                          verbose=args.verbose and guessed_passage is not None))
             if guessed_passage is not None:
                 write_passage(guessed_passage,
                               args.outdir, args.prefix, args.binary, args.verbose)
         if passage_scores:
-            scores = Scores.aggregate(passage_scores)
+            scores = evaluation.Scores.aggregate(passage_scores)
             print("\nAverage F1 score on test: %.3f" % scores.average_f1())
             print("Aggregated scores:")
             scores.print()
@@ -390,7 +389,7 @@ def main():
                               if fold is not dev_passages and fold is not test_passages
                               for passage in fold]
             fold_scores.append(train_test(train_passages, dev_passages, test_passages, args))
-        scores = Scores.aggregate(fold_scores)
+        scores = evaluation.Scores.aggregate(fold_scores)
         print("Average F1 score for each fold: " + ", ".join(
             "%.3f" % s.average_f1() for s in fold_scores))
         print("Aggregated scores across folds:\n")

@@ -20,9 +20,9 @@ UNICODE_ESCAPE_PATTERN = re.compile(r"\\u\d+")
 
 
 def main():
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('directory', help="directory containing XML files to process")
-    punctuations, words = read_words_and_punctuations(parser.parse_args())
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument('directory', help="directory containing XML files to process")
+    punctuations, words = read_words_and_punctuations(argparser.parse_args())
 
     word_char_categories, punctuation_char_categories, wrong_words, wrong_punctuation = \
         group_by_categories(punctuations, words)
