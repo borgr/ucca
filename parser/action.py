@@ -99,7 +99,7 @@ class Action(object):
                               [Actions.Reduce, Actions.Shift, Actions.Finish]
             if Config().compound_swap:
                 cls.all_actions += [Actions.Swap(i) for i in range(1, cls.MAX_SWAP)]
-            else:
+            elif not Config().no_swap:
                 cls.all_actions.append(Actions.Swap)
             cls.all_action_ids = {(action.type_id, action.tag): i
                                   for i, action in enumerate(cls.all_actions)}

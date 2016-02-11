@@ -22,7 +22,7 @@ class Config(object, metaclass=Singleton):
         argparser.add_argument("-f", "--folds", type=int, choices=range(2, 11), default=None,
                                help="number of folds for k-fold cross validation")
         argparser.add_argument("-m", "--model", default=None, help="model file to load/save")
-        argparser.add_argument("-o", "--outdir", default=".", help="output directory")
+        argparser.add_argument("-o", "--outdir", default=".", help="output directory for parsed files")
         argparser.add_argument("-p", "--prefix", default="ucca_passage", help="output filename prefix")
         argparser.add_argument("-L", "--log", default="parser.log", help="output log file")
         argparser.add_argument("-I", "--iterations", type=int, default=1,
@@ -44,7 +44,7 @@ class Config(object, metaclass=Singleton):
         argparser.add_argument("-u", "--minupdate", type=int, default=5,
                                help="minimum updates a feature must have before being used")
         argparser.add_argument("-l", "--checkloops", action="store_true",
-                               help="check for infinite loops")
+                               help="abort if the parser reaches the exact same state as it did before")
         argparser.add_argument("-V", "--verify", action="store_true",
                                help="verify oracle successfully reproduces the passage")
         argparser.add_argument("-c", "--compoundswap", action="store_true",
@@ -55,6 +55,8 @@ class Config(object, metaclass=Singleton):
                                help="allow multiple edges between the same nodes (with different tags)")
         argparser.add_argument("-n", "--nolinkage", action="store_true",
                                help="ignore linkage nodes and edges during both train and test")
+        argparser.add_argument("-S", "--noswap", action="store_true",
+                               help="disable swap transitions entirely")
         self.args = argparser.parse_args()
 
         assert not (self.args.train or self.args.dev) or self.args.folds is None,\
@@ -78,6 +80,9 @@ class Config(object, metaclass=Singleton):
         self.check_loops = self.args.checkloops
         self.verify = self.args.verify
         self.compound_swap = self.args.compoundswap
+        self.no_swap = self.args.noswap
+        assert not (self.compound_swap and self.no_swap),\
+            "--compoundswap and --noswap are incompatible"
         self.max_nodes_ratio = self.args.maxnodes
         self.multiple_edges = self.args.multiedge
         self.no_linkage = self.args.nolinkage
