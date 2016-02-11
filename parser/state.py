@@ -3,11 +3,11 @@ from collections import deque, defaultdict
 from itertools import groupby
 from operator import attrgetter
 
-from action import Actions
-from config import Config
-from constants import ROOT_ID, Constraints
-from edge import Edge
-from node import Node
+from parser.action import Actions
+from parser.config import Config
+from parser.constants import ROOT_ID, Constraints
+from parser.edge import Edge
+from parser.node import Node
 from ucca import core, layer0, layer1, convert
 from ucca.layer1 import EdgeTags
 

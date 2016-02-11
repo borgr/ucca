@@ -2,8 +2,8 @@ import os
 
 import numpy as np
 
-import parser
-from config import Config
+import parser.parser
+from parser.config import Config
 from ucca.evaluation import UNLABELED, WEAK_LABELED, LABELED
 
 

@@ -1,4 +1,4 @@
-from config import Config
+from parser.config import Config
 
 
 class Edge(object):

@@ -2,10 +2,10 @@
 
 import unittest
 
+from parser.oracle import Oracle
+from parser.state import State
 from ucca import convert
 from ucca.tests.test_ucca import TestUtil
-from state import State
-from oracle import Oracle
 
 
 class ParserTests(unittest.TestCase):

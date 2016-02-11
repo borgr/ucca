@@ -7,12 +7,12 @@ from xml.etree.ElementTree import ParseError
 
 from nltk import pos_tag
 
-from action import Action
-from averaged_perceptron import AveragedPerceptron
-from config import Config
-from features import FeatureExtractor
-from oracle import Oracle
-from state import State
+from parser.action import Action
+from parser.averaged_perceptron import AveragedPerceptron
+from parser.config import Config
+from parser.features import FeatureExtractor
+from parser.oracle import Oracle
+from parser.state import State
 from ucca import core, layer0, layer1, convert, ioutil, diffutil
 from ucca.evaluation import evaluate, Scores
 
