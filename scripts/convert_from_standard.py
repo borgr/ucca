@@ -44,7 +44,7 @@ def main():
                            help="remove multiple parents to get a tree")
     args = argparser.parse_args()
 
-    converter = convert.CONVERTERS[args.format][1]
+    converter = convert.TO_FORMAT[args.format]
     for pattern in args.filenames:
         filenames = glob.glob(pattern)
         if not filenames:

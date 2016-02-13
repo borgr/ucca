@@ -44,10 +44,9 @@ def main():
             except AttributeError:
                 passage_id = basename
 
-            converter = convert.CONVERTERS.get(args.format or ext.lstrip("."))
+            converter = convert.FROM_FORMAT.get(args.format or ext.lstrip("."))
             if converter is None:
                 raise IOError("Unknown extension '%s'. Specify format using -f" % ext)
-            converter, _ = converter
 
             with open(filename) as f:
                 for passage in converter(f, passage_id, args.split):

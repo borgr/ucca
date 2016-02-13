@@ -1361,6 +1361,8 @@ CONVERTERS = {
     "export": (from_export, to_export),
     "txt":    (from_text,   to_text),
 }
+FROM_FORMAT = {f: c[0] for f, c in CONVERTERS.items()}
+TO_FORMAT = {f: c[1] for f, c in CONVERTERS.items()}
 
 
 def split2sentences(passage, remarks=False):
@@ -1373,35 +1375,14 @@ def split2paragraphs(passage, remarks=False):
 
 def split2segments(passage, is_sentences, remarks=False):
     """
-    If passage is a core.Passage, split it to Passage objects for each paragraph.
-    Otherwise, if it is a string, split it to list of lists of strings,
-    each list in the top level being a paragraph
-    :param passage: Passage, str or list
+    Split passage to sub-passages
+    :param passage: Passage object
     :param is_sentences: if True, split to sentences; otherwise, paragraphs
-    :param remarks: Whether to add remarks with original node IDs (if Passage given)
-    :return: sequence of passages, or list of list of strings
+    :param remarks: Whether to add remarks with original node IDs
+    :return: sequence of passages
     """
-    if isinstance(passage, core.Passage):
-        ends = textutil.break2sentences(passage) if is_sentences else textutil.break2paragraphs(passage)
-        return split_passage(passage, ends, remarks=remarks)
-    elif isinstance(passage, str):  # split to segments and tokens
-        return split_sublists([nltk.word_tokenize(passage)],
-                              (("\n",) + textutil.SENTENCE_END_MARKS) if is_sentences else "\n")
-    elif is_sentences:  # not Passage nor str, assume list of list of strings (paragraphs)
-        return split_sublists(passage, textutil.SENTENCE_END_MARKS)
-    else:  # already split to paragraphs
-        return passage
-
-
-def split_sublists(sublists, sep):
-    ret = []
-    for sublist in sublists:
-        for is_end, subsublist in groupby(sublist, key=lambda token: token in sep):
-            if is_end:
-                ret[-1][0] += subsublist
-            else:
-                ret.append([list(subsublist)])
-    return ret
+    ends = (textutil.break2sentences if is_sentences else textutil.break2paragraphs)(passage)
+    return split_passage(passage, ends, remarks=remarks)
 
 
 def split_passage(passage, ends, remarks=False):
@@ -1413,8 +1394,9 @@ def split_passage(passage, ends, remarks=False):
     :param remarks: add original node ID as remarks to the new nodes
     """
     passages = []
-    for start, end in zip([0] + ends[:-1], ends):
-        other = core.Passage(ID=passage.ID, attrib=passage.attrib.copy())
+    for i, (start, end) in enumerate(zip([0] + ends[:-1], ends)):
+        other = core.Passage(ID="%s_%d" % (passage.ID, i),
+                             attrib=passage.attrib.copy())
         other.extra = passage.extra.copy()
         # Create terminals and find layer 1 nodes to be included
         l0 = passage.layer(layer0.LAYER_ID)

@@ -446,7 +446,7 @@ class Layer1(core.Layer):
         return self._linkages[:]
 
     def next_id(self):
-        """Returns the next avilable ID string for this layer."""
+        """Returns the next available ID string for this layer."""
         n = len(self._all) + 1
         while True:
             ID = "{}{}{}".format(LAYER_ID, core.Node.ID_SEPARATOR, n)
