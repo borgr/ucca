@@ -71,6 +71,18 @@ class Terminal(core.Node):
     def punct(self):
         return self.tag == NodeTags.Punct
 
+    def get_terminals(self, punct=True, *args, **kwargs):
+        """Returns a list containing just this Terminal.
+
+        Args:
+            punct: whether to include punctuation Terminals, defaults to True
+
+        Returns:
+            a list of :class:layer0.Terminal objects
+
+        """
+        return [] if self.punct else [self]
+
     def equals(self, other, *, ordered=False, **kwargs):
         """Equals if the Terminals are of the same Layer, tag, position & text.
 
