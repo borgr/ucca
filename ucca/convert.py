@@ -1355,6 +1355,14 @@ def to_export(passage, test=False, tree=False):
     return ExportConverter().to_format(passage, test, tree)
 
 
+CONVERTERS = {
+    "conll":  (from_conll,  to_conll),
+    "sdp":    (from_sdp,    to_sdp),
+    "export": (from_export, to_export),
+    "txt":    (from_text,   to_text),
+}
+
+
 def split2sentences(passage, remarks=False):
     return split2segments(passage, is_sentences=True, remarks=remarks)
 

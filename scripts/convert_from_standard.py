@@ -29,11 +29,11 @@ def main():
     argparser = argparse.ArgumentParser(description=desc)
     argparser.add_argument("filenames", nargs="+",
                            help="passage file names to convert")
-    argparser.add_argument("-f", "--format", choices=("conll", "sdp", "export", "txt"),
-                           default="conll", help="output file format")
+    argparser.add_argument("-f", "--format", choices=convert.CONVERTERS, required=True,
+                           help="output file format")
     argparser.add_argument("-o", "--outdir", default=".",
                            help="output directory")
-    argparser.add_argument("-p", "--prefix", default="ucca_passage",
+    argparser.add_argument("-p", "--prefix", default="",
                            help="output filename prefix")
     argparser.add_argument("-t", "--test", action="store_true",
                            help="omit prediction columns (head and deprel for conll; "
@@ -44,22 +44,14 @@ def main():
                            help="remove multiple parents to get a tree")
     args = argparser.parse_args()
 
-    if args.format == "conll":
-        converter = convert.to_conll
-    elif args.format == "sdp":
-        converter = convert.to_sdp
-    elif args.format == "export":
-        converter = convert.to_export
-    elif args.format == "txt":
-        converter = convert.to_text
-
+    converter = convert.CONVERTERS[args.format][1]
     for pattern in args.filenames:
         filenames = glob.glob(pattern)
         if not filenames:
             raise IOError("Not found: " + pattern)
         for filename in filenames:
             output, passage_id = convert_passage(filename, converter, args)
-            outfile = "%s%s%s%s.%s" % (args.outdir, os.path.sep, args.prefix, passage_id, args.format)
+            outfile = "%s.%s" % (args.outdir + os.path.sep + args.prefix + passage_id, args.format)
             sys.stderr.write("Writing '%s'...\n" % outfile)
             with open(outfile, "w") as f:
                 f.write(output + "\n")

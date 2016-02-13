@@ -20,8 +20,8 @@ def main():
     argparser = argparse.ArgumentParser(description=desc)
     argparser.add_argument("filenames", nargs="+",
                            help="CoNLL file names to convert")
-    argparser.add_argument("-f", "--format", choices=("conll", "sdp", "export", "txt"),
-                           default="conll", help="input file format")
+    argparser.add_argument("-f", "--format", choices=convert.CONVERTERS,
+                           help="input file format")
     argparser.add_argument("-o", "--outdir", default=".",
                            help="output directory")
     argparser.add_argument("-p", "--prefix", default="",
@@ -32,25 +32,22 @@ def main():
                            help="split each sentence to its own passage")
     args = argparser.parse_args()
 
-    if args.format == "conll":
-        converter = convert.from_conll
-    elif args.format == "sdp":
-        converter = convert.from_sdp
-    elif args.format == "export":
-        converter = convert.from_export
-    elif args.format == "txt":
-        converter = convert.from_text
-
     for pattern in args.filenames:
         filenames = glob.glob(pattern)
         if not filenames:
             raise IOError("Not found: " + pattern)
         for filename in filenames:
-            basename = os.path.basename(filename)
+            no_ext, ext = os.path.splitext(filename)
+            basename = os.path.basename(no_ext)
             try:
                 passage_id = re.search(r"\d+", basename).group(0)
             except AttributeError:
                 passage_id = basename
+
+            converter = convert.CONVERTERS.get(args.format or ext.lstrip("."))
+            if converter is None:
+                raise IOError("Unknown extension '%s'. Specify format using -f" % ext)
+            converter, _ = converter
 
             with open(filename) as f:
                 for passage in converter(f, passage_id, args.split):
