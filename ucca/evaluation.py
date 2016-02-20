@@ -3,6 +3,7 @@
 The evaluation software for UCCA layer 1.
 """
 from collections import Counter
+from operator import attrgetter
 
 from ucca.layer1 import EdgeTags, NodeTags
 
@@ -220,16 +221,12 @@ class Scores(object):
     def __init__(self, evaluators):
         self.evaluators = dict(evaluators)
 
-    def average_f1(self):
+    def average_unlabeled_f1(self):
         """
-        Calculate the average F1 score across evaluation types and regular/remote edges
-        Note: gives the same weight to regular and remote edges, and to labeled/unlabeled
+        Calculate the average unlabeled F1 score across regular/remote edges
         :return: a single number, the average F1
         """
-        scores = [s.f1 for v in self.evaluators.values()
-                  for s in (v.regular, v.remotes)
-                  if s.f1 != "NaN"]
-        return sum(scores) / len(scores) if scores else 0
+        return self.evaluators.get(UNLABELED).aggregate_all().f1
 
     @staticmethod
     def aggregate(scores):
@@ -240,6 +237,14 @@ class Scores(object):
         """
         return Scores((t, EvaluatorResults.aggregate(s.evaluators[t] for s in scores))
                       for t in EVAL_TYPES)
+
+    def aggregate_all(self):
+        """
+        Aggregate all SummaryStatistics in this Scores instance
+        :return: SummaryStatistics object representing aggregation over all instances
+        """
+        return SummaryStatistics.aggregate(s for e in self.evaluators.values()
+                                           for s in (e.regular, e.remotes))
 
     def print(self):
         for eval_type in EVAL_TYPES:
@@ -279,6 +284,13 @@ class EvaluatorResults(object):
         return EvaluatorResults(SummaryStatistics.aggregate(regular),
                                 SummaryStatistics.aggregate(remotes))
 
+    def aggregate_all(self):
+        """
+        Aggregate all SummaryStatistics in this EvaluatorResults instance
+        :return: SummaryStatistics object representing aggregation over all instances
+        """
+        return SummaryStatistics.aggregate((self.regular, self.remotes))
+
 
 class SummaryStatistics(object):
     def __init__(self, num_matches, num_only_guessed, num_only_ref):
@@ -302,12 +314,9 @@ class SummaryStatistics(object):
         print("F1: {:.3}".format(self.f1))
 
     @classmethod
-    def aggregate(cls, scores):
-        num_matches, num_only_guessed, num_only_ref = zip(*(
-            (s.num_matches, s.num_only_guessed, s.num_only_ref) for s in scores))
-        return SummaryStatistics(sum(num_matches),
-                                 sum(num_only_guessed),
-                                 sum(num_only_ref))
+    def aggregate(cls, stats):
+        return SummaryStatistics(*map(sum, [map(attrgetter(attr), stats)
+                                            for attr in ("num_matches", "num_only_guessed", "num_only_ref")]))
 
 
 def get_scores(p1, p2, eval_type, units, fscore, errors, verbose=True):
