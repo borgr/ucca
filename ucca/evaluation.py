@@ -246,6 +246,19 @@ class Scores(object):
             print("Evaluation type: (" + eval_type + ")")
             self.evaluators[eval_type].print()
 
+    def fields(self):
+        e = self.evaluators
+        return ["%.3f" % float(p) for p in
+                (e[LABELED].regular.f1,      e[LABELED].remotes.f1,
+                 e[UNLABELED].regular.f1,    e[UNLABELED].remotes.f1,
+                 e[WEAK_LABELED].regular.f1, e[WEAK_LABELED].remotes.f1)]
+
+    @staticmethod
+    def field_titles():
+        return ["regular labeled f1", "remote labeled f1",
+                "regular unlabeled f1", "remote unlabeled f1",
+                "regular weakly labeled f1", "remote weakly labeled f1"]
+
 
 class EvaluatorResults(object):
     def __init__(self, regular, remotes):
