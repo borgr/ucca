@@ -226,7 +226,7 @@ class Scores(object):
         Calculate the average unlabeled F1 score across regular/remote edges
         :return: a single number, the average F1
         """
-        return self.evaluators.get(UNLABELED).aggregate_all().f1
+        return float(self.evaluators.get(UNLABELED).aggregate_all().f1)
 
     @staticmethod
     def aggregate(scores):
