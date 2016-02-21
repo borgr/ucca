@@ -1017,8 +1017,8 @@ class DependencyConverter(FormatConverter):
                 return next(e for tag in _TAG_PRIORITY  # head selection by priority
                             for e in unit.outgoing
                             if e.tag == tag and not e.child.attrib.get("implicit"))
-            except StopIteration as e:
-                raise Exception("Cannot find head child for node ID " + unit.ID) from e
+            except StopIteration:
+                return next(e for e in unit.outgoing if not e.child.attrib.get("implicit"))
 
         def _find_head_terminal(unit):
             """ find the head terminal of this unit, by recursive descent
