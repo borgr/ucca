@@ -1151,7 +1151,7 @@ class SdpConverter(DependencyConverter):
             pred = "+" if i in preds else "-"
             fields = [position, dep_node.terminal.text, "_", tag]
             if not test:
-                fields += ["_", pred, "_"] + \
+                fields += ["-", pred, "_"] + \
                           [heads.get(pred, "_") for pred in preds]  # rel for each pred
             yield fields
 
