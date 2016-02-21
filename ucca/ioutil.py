@@ -9,6 +9,7 @@ from ucca.textutil import indent_xml
 def file2passage(filename):
     """Opens a file and returns its parsed Passage object
     Tries to read both as a standard XML file and as a binary pickle
+    :param filename: file name to write to
     """
     try:
         with open(filename) as f:
@@ -24,6 +25,10 @@ def file2passage(filename):
 
 def passage2file(passage, filename, indent=True, binary=False):
     """Writes a UCCA passage as a standard XML file or a binary pickle
+    :param passage: passage object to write
+    :param filename: file name to write to
+    :param indent: whether to indent each line
+    :param binary: whether to write pickle format (or XML)
     """
     if binary:
         with open(filename, 'wb') as h:

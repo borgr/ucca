@@ -18,9 +18,7 @@ import sys
 import xml.etree.ElementTree as ET
 import xml.sax.saxutils
 from collections import defaultdict
-from itertools import groupby, islice, tee
-
-import nltk
+from itertools import islice
 
 from ucca import textutil, core, layer0, layer1
 from ucca.layer1 import EdgeTags
@@ -814,14 +812,15 @@ class DependencyConverter(FormatConverter):
 
     def __init__(self):
         self.dep_nodes = None
+        self.sentence_id = None
 
     @staticmethod
     def _read_line(line):
-        pass
+        return DependencyConverter.Node()
 
     @staticmethod
     def _generate_lines(dep_nodes, test):
-        pass
+        yield ""
 
     @staticmethod
     def _link_heads(dep_nodes):
@@ -915,9 +914,9 @@ class DependencyConverter(FormatConverter):
                         remotes.append(edge)
                     elif dep_node.node is None:
                         dep_node.node = l1.add_fnode(edge.head.node, edge.rel)
-                        dep_node.preterminal = \
-                            l1.add_fnode(dep_node.node, self._label_edge(dep_node)) \
-                                if dep_node.outgoing else dep_node.node
+                        dep_node.preterminal = l1.add_fnode(
+                            dep_node.node, self._label_edge(dep_node)) \
+                            if dep_node.outgoing else dep_node.node
                     else:
                         print("More than one non-remote non-linkage head for '%s': %s"
                               % (dep_node.node, dep_node.incoming), file=sys.stderr)
@@ -1132,7 +1131,7 @@ class SdpConverter(DependencyConverter):
         # incoming: (head positions, dependency relations, is remote for each one)
         return DependencyConverter.Node(
             [DependencyConverter.Edge(i + 1, rel.rstrip("*"), rel.endswith("*"))
-             for i, rel in enumerate(fields[7:]) if rel != "_"] or \
+             for i, rel in enumerate(fields[7:]) if rel != "_"] or
             [DependencyConverter.Edge(0, DependencyConverter.ROOT, False)],
             DependencyConverter.Terminal(text, tag), is_head=(pred == "+"))
 
@@ -1165,6 +1164,7 @@ class ExportConverter(FormatConverter):
 
     def __init__(self):
         self.passage_id = None
+        self.node_by_id = None
 
     def _init_nodes(self, line):
         m = re.match("#BOS\s+(\d+).*", line)
