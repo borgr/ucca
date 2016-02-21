@@ -1018,14 +1018,16 @@ class DependencyConverter(FormatConverter):
                             for e in unit.outgoing
                             if e.tag == tag and not e.child.attrib.get("implicit"))
             except StopIteration:
-                return next(e for e in unit.outgoing if not e.child.attrib.get("implicit"))
+                # edge tags are not in the priority list, so use a simple heuristic:
+                # find the child with the highest number of terminals in the yield
+                return max(unit.outgoing, key=lambda e: len(e.child.get_terminals()))
 
         def _find_head_terminal(unit):
             """ find the head terminal of this unit, by recursive descent
             :param unit: unit to find the terminal of
             :return the unit itself if it is a terminal, otherwise recursively applied to child
             """
-            while unit.layer.ID != layer0.LAYER_ID:
+            while unit.outgoing:
                 unit = _find_head_child_edge(unit).child
             return unit
 
@@ -1047,7 +1049,7 @@ class DependencyConverter(FormatConverter):
             for e in unit.incoming:
                 if e == _find_head_child_edge(e.parent):
                     yield from _find_top_headed_edges(e.parent)
-                else:
+                elif _find_head_terminal(e.parent).layer.ID == layer0.LAYER_ID:
                     yield e
 
         def _find_cycle(n, v, p):
