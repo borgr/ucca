@@ -918,8 +918,9 @@ class DependencyConverter(FormatConverter):
                             dep_node.node, self._label_edge(dep_node)) \
                             if dep_node.outgoing else dep_node.node
                     else:
-                        print("More than one non-remote non-linkage head for '%s': %s"
-                              % (dep_node.node, dep_node.incoming), file=sys.stderr)
+                        # print("More than one non-remote non-linkage head for '%s': %s"
+                        #       % (dep_node.node, dep_node.incoming), file=sys.stderr)
+                        pass
 
                 # link remote edges
                 for edge in remotes:
@@ -1110,9 +1111,9 @@ class ConllConverter(DependencyConverter):
             if not test:
                 heads = [(e.head_index + 1, e.rel) for e in dep_node.incoming] or \
                         [(0, DependencyConverter.ROOT)]
-                if len(heads) > 1:
-                    print("More than one non-remote non-linkage parent for '%s': %s"
-                          % (dep_node.terminal, heads), file=sys.stderr)
+                # if len(heads) > 1:
+                #     print("More than one non-remote non-linkage parent for '%s': %s"
+                #           % (dep_node.terminal, heads), file=sys.stderr)
                 fields += heads[0]   # head, dependency relation
             fields += ["_", "_"]   # projective head, projective dependency relation (optional)
             yield fields
