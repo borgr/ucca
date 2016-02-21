@@ -313,17 +313,17 @@ class FoundationalNode(core.Node):
         """
         terms = []
         for edge in list(self):
-            if ((edge.attrib.get('remote', False) and not remotes) or
-                    (edge.tag == EdgeTags.Punctuation and not punct)):
+            if edge.attrib.get('remote') and not remotes or \
+                    edge.tag == EdgeTags.Punctuation and not punct:
                 continue
             elif edge.tag == EdgeTags.Terminal:
                 terms.append(edge.child)
             elif edge.tag == EdgeTags.Punctuation:
-                terms.extend(edge.child.terminals)
+                terms += edge.child.terminals
             elif edge.child.layer.ID == layer0.LAYER_ID:
                 raise ValueError("Terminal with incoming %s edge" % edge.tag)
             else:
-                terms.extend(edge.child.get_terminals(punct, remotes))
+                terms += edge.child.get_terminals(punct, remotes)
         terms.sort(key=operator.attrgetter('position'))
         return terms
 
@@ -368,21 +368,6 @@ class FoundationalNode(core.Node):
     def is_scene(self):
         return self.state is not None or self.process is not None
 
-    def str_sequences(self):
-        """Returns a list of stringified sequences and positions of this FNode.
-
-        For continuous FNodes, it will return a 1-item list. The format
-        of the chunks is as follows:
-            Terminals: just the text of it
-            Punctuation: just the text of the terminal(s) under it
-            FNodes: According to their str()
-
-        """
-        if not self.discontiguous:
-            return [(str(self), self.start_position, self.end_position)]
-        for start, end in self.get_sequences():
-            pass
-
     def __str__(self):
         start = lambda x: (x.position if x.layer.ID == layer0.LAYER_ID else
                            x.start_position)
@@ -405,9 +390,9 @@ class FoundationalNode(core.Node):
                     output += "[{} IMPLICIT] ".format(edge_tag)
                 else:
                     output += "[{} {}] ".format(edge_tag, str(node))
-            if (start(node) != -1 and not edge.attrib.get('remote')
-                    and i + 1 < len(sorted_edges)
-                    and end(node) + 1 < start(sorted_edges[i + 1].child)):
+            if (start(node) != -1 and not edge.attrib.get('remote') and
+                    i + 1 < len(sorted_edges) and
+                    end(node) + 1 < start(sorted_edges[i + 1].child)):
                 output += "... "  # adding '...' if discontiguous
         return output
 
