@@ -7,7 +7,7 @@ are available at [the following paper][1]:
     Omri Abend and Ari Rappoport, ACL 2013
 
 This Python3-only package provides an API to the UCCA annotation and tools to
-manipulate and process it. It's main features are conversion between different
+manipulate and process it. Its main features are conversion between different
 representations of UCCA annotations, and rich objects for all of the linguistic
 relations which appear in the theoretical framework (see `core`, `layer0`, `layer1`
 and `convert` modules under the `ucca` package).
