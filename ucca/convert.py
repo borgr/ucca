@@ -1166,6 +1166,7 @@ class ExportConverter(FormatConverter):
 
         def __call__(self):
             self._id += 1
+            assert self._id < 1000, "Cannot convert to export; more than 1000 nodes found"
             return str(self._id)
 
     def __init__(self):
