@@ -678,7 +678,7 @@ def from_text(text, passage_id='1', split=False, *args, **kwargs):
     del args, kwargs
     p = None
     l0 = None
-    for i, par in enumerate(text):
+    for i, par in enumerate(filter(None, map(str.strip, text))):  # Only non-empty lines
         if p is None:
             p = core.Passage(passage_id)
             l0 = layer0.Layer0(p)
