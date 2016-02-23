@@ -1406,7 +1406,7 @@ def split_passage(passage, ends, remarks=False):
     """
     passages = []
     for i, (start, end) in enumerate(zip([0] + ends[:-1], ends)):
-        other = core.Passage(ID="%s_%d" % (passage.ID, i),
+        other = core.Passage(ID="%s%03d" % (passage.ID, i),
                              attrib=passage.attrib.copy())
         other.extra = passage.extra.copy()
         # Create terminals and find layer 1 nodes to be included
