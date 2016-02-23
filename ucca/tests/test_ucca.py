@@ -543,7 +543,7 @@ class ConversionTests(unittest.TestCase):
         self.assertTrue(passage.equals(ref, ordered=True))
 
     def test_from_text(self):
-        sample = ['Hello . again', 'nice', ' ?! end', '']
+        sample = ['Hello . again', 'nice', ' ? ! end', '']
         passage = next(convert.from_text(sample))
         terms = passage.layer(layer0.LAYER_ID).all
         pos = 0

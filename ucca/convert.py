@@ -20,6 +20,8 @@ import xml.sax.saxutils
 from collections import defaultdict
 from itertools import islice
 
+from nltk.tokenize import word_tokenize
+
 from ucca import textutil, core, layer0, layer1
 from ucca.layer1 import EdgeTags
 
@@ -664,7 +666,7 @@ def is_punctuation(token):
            UNICODE_ESCAPE_PATTERN.match(token)
 
 
-def from_text(text, passage_id='1', split=False):
+def from_text(text, passage_id='1', split=False, *args, **kwargs):
     """Converts from tokenized strings to a Passage object.
 
     :param text: a sequence of strings, where each one will be a new paragraph.
@@ -673,6 +675,7 @@ def from_text(text, passage_id='1', split=False):
 
     :return generator of Passage object with only Terminals units.
     """
+    del args, kwargs
     p = None
     l0 = None
     for i, par in enumerate(text):
@@ -680,7 +683,7 @@ def from_text(text, passage_id='1', split=False):
             p = core.Passage(passage_id)
             l0 = layer0.Layer0(p)
             layer1.Layer1(p)
-        for token in par.split():
+        for token in word_tokenize(par):
             # i is paragraph index, but it starts with 0, so we need to add +1
             l0.add_terminal(text=token, punct=is_punctuation(token),
                             paragraph=(i + 1))
@@ -1286,7 +1289,7 @@ class ExportConverter(FormatConverter):
         return lines
 
 
-def from_conll(lines, passage_id, split=False):
+def from_conll(lines, passage_id, split=False, *args, **kwargs):
     """Converts from parsed text in CoNLL format to a Passage object.
 
     :param lines: iterable of lines in CoNLL format, describing a single passage.
@@ -1295,6 +1298,7 @@ def from_conll(lines, passage_id, split=False):
 
     :return a Passage object.
     """
+    del args, kwargs
     return ConllConverter().from_format(lines, passage_id, split)
 
 
@@ -1310,7 +1314,7 @@ def to_conll(passage, test=False, *args, **kwargs):
     return ConllConverter().to_format(passage, test)
 
 
-def from_sdp(lines, passage_id, split=False):
+def from_sdp(lines, passage_id, split=False, *args, **kwargs):
     """Converts from parsed text in SemEval 2015 SDP format to a Passage object.
 
     :param lines: iterable of lines in SDP format, describing a single passage.
@@ -1319,6 +1323,7 @@ def from_sdp(lines, passage_id, split=False):
 
     :return a Passage object.
     """
+    del args, kwargs
     return SdpConverter().from_format(lines, passage_id, split)
 
 
@@ -1334,7 +1339,7 @@ def to_sdp(passage, test=False, *args, **kwargs):
     return SdpConverter().to_format(passage, test)
 
 
-def from_export(lines, passage_id=None, split=False):
+def from_export(lines, passage_id=None, split=False, *args, **kwargs):
     """Converts from parsed text in NeGra export format to a Passage object.
 
     :param lines: iterable of lines in NeGra export format, describing a single passage.
@@ -1343,10 +1348,11 @@ def from_export(lines, passage_id=None, split=False):
 
     :return generator of Passage objects.
     """
+    del args, kwargs
     return ExportConverter().from_format(lines, passage_id, split)
 
 
-def to_export(passage, test=False, tree=False):
+def to_export(passage, test=False, tree=False, *args, **kwargs):
     """ Convert from a Passage object to a string in NeGra export format (export)
 
     :param passage: the Passage object to convert
@@ -1355,6 +1361,7 @@ def to_export(passage, test=False, tree=False):
 
     :return list of lines representing a (discontinuous) tree structure constructed from the passage
     """
+    del args, kwargs
     return ExportConverter().to_format(passage, test, tree)
 
 
