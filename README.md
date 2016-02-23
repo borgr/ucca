@@ -12,6 +12,30 @@ representations of UCCA annotations, and rich objects for all of the linguistic
 relations which appear in the theoretical framework (see `core`, `layer0`, `layer1`
 and `convert` modules under the `ucca` package).
 
+Running the parser:
+-------------------
+
+Install NLTK and the required modules:
+
+    pip3 install --user nltk
+    python3 -m nltk.downloader averaged_perceptron_tagger punkt
+
+Add this directory to your `PYTHONPATH`:
+
+    setenv PYTHONPATH $PWD
+
+Download and extract the pre-trained model:
+
+    wget http://www.cs.huji.ac.il/~danielh/ucca/model.tar.gz
+    tar xvzf model.tar.gz
+
+Run the parser on a text file (here named `example.txt`):
+
+    python3 parsing/parse.py example.txt -m ucca-wiki -s
+
+A file named `example.xml` will be created.
+
+
 Installation (on Linux):
 ------------------------
 
