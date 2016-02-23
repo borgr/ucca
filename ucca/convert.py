@@ -1261,7 +1261,8 @@ class ExportConverter(FormatConverter):
                 if node.ID in node_to_id:
                     continue
                 children = [child for child in node.children if
-                            child.layer.ID != layer0.LAYER_ID and child.ID not in node_to_id]
+                            child.layer.ID != layer0.LAYER_ID and child.ID not in node_to_id and
+                            not (tree and child.attrib.get("implicit"))]  # tree also means no implicit
                 if children:
                     next_nodes += children
                     continue
