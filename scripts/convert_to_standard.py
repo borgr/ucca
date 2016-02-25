@@ -30,6 +30,8 @@ def main():
                            help="write in pickle binary format (.pickle)")
     argparser.add_argument("-s", "--split", action="store_true",
                            help="split each sentence to its own passage")
+    argparser.add_argument("-t", "--tree", action="store_true",
+                           help="currently unused")
     args = argparser.parse_args()
 
     for pattern in args.filenames:
