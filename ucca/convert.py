@@ -1367,14 +1367,21 @@ def to_export(passage, test=False, tree=False, *args, **kwargs):
     return ExportConverter().to_format(passage, test, tree)
 
 
+def from_xml(f, passage_id=None, split=False, *args, **kwargs):
+    del args, kwargs
+    p = from_standard(ET.ElementTree().parse(f))
+    return split2sentences(p) if split else p
+
+
 CONVERTERS = {
     "conll":  (from_conll,  to_conll),
     "sdp":    (from_sdp,    to_sdp),
     "export": (from_export, to_export),
     "txt":    (from_text,   to_text),
+    "xml":    (from_xml,    None),
 }
-FROM_FORMAT = {f: c[0] for f, c in CONVERTERS.items()}
-TO_FORMAT = {f: c[1] for f, c in CONVERTERS.items()}
+FROM_FORMAT = {f: c[0] for f, c in CONVERTERS.items() if c[0] is not None}
+TO_FORMAT = {f: c[1] for f, c in CONVERTERS.items() if c[1] is not None}
 
 
 def split2sentences(passage, remarks=False):
