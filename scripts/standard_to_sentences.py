@@ -16,15 +16,18 @@ def main():
     argparser.add_argument('-o', '--outdir', default='.', help="output directory")
     argparser.add_argument('-p', '--prefix', default='', help="output filename prefix")
     argparser.add_argument('-r', '--remarks', action='store_true', help="annotate original IDs")
+    argparser.add_argument("-b", "--binary", action="store_true",
+                           help="write in pickle binary format (.pickle)")
     args = argparser.parse_args()
 
     for filename in args.filenames:
         passage = file2passage(filename)
         sentences = ucca.convert.split2sentences(passage, remarks=args.remarks)
         for i, sentence in enumerate(sentences):
-            outfile = "%s/%s.xml" % (args.outdir, args.prefix + sentence.ID)
+            outfile = "%s/%s.%s" % (args.outdir, args.prefix + sentence.ID,
+                                    "pickle" if args.binary else "xml")
             sys.stderr.write("Writing passage file for sentence '%s'...\n" % outfile)
-            passage2file(sentence, outfile)
+            passage2file(sentence, outfile, args.binary)
 
     sys.exit(0)
 
