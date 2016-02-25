@@ -1239,7 +1239,9 @@ class ExportConverter(FormatConverter):
             if parent is None:
                 print("Terminal is a child of the root: '%s'" % text, file=sys.stderr)
                 parent = l1.add_fnode(parent, edge_tag)
-            parent.add(edge_tag, terminal)
+            if edge_tag != EdgeTags.Terminal:
+                print("Terminal with incoming %s edge: '%s'" % (edge_tag, text), file=sys.stderr)
+            parent.add(EdgeTags.Terminal, terminal)
 
         return p
 
