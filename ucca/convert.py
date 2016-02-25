@@ -1171,13 +1171,13 @@ class ExportConverter(FormatConverter):
 
     def __init__(self):
         self.passage_id = None
+        self.sentence_id = None
         self.node_by_id = None
 
     def _init_nodes(self, line):
         m = re.match("#BOS\s+(\d+).*", line)
         assert m, "Invalid first line: " + line
-        if self.passage_id is None:
-            self.passage_id = m.group(1)
+        self.sentence_id = m.group(1)
         self.node_by_id = {}
         self.pending_nodes = []
         self.remotes = []
@@ -1197,7 +1197,7 @@ class ExportConverter(FormatConverter):
         for edge_tag, parent_id in zip(fields[3::2], fields[4::2]):
             self.node_ids_with_children.add(parent_id)
             if parent_id == "0":
-                self.node_by_id[node_id] = None
+                self.node_by_id[node_id] = None  # root node: to add to it, we add to None
             elif edge_tag.endswith("*"):
                 self.remotes.append((parent_id, edge_tag.rstrip("*"), node_id))
             elif edge_tag in (EdgeTags.LinkArgument, EdgeTags.LinkRelation):
@@ -1206,7 +1206,7 @@ class ExportConverter(FormatConverter):
                 self.pending_nodes.append((parent_id, edge_tag, node_id))
 
     def _build_passage(self):
-        p = core.Passage(self.passage_id)
+        p = core.Passage(self.sentence_id or self.passage_id)
         l0 = layer0.Layer0(p)
         l1 = layer1.Layer1(p)
         paragraph = 1
@@ -1235,7 +1235,11 @@ class ExportConverter(FormatConverter):
         for text, tag, _, edge_tag, parent_id in self.terminals:
             punctuation = (tag == layer0.NodeTags.Punct)
             terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
-            self.node_by_id[parent_id].add(edge_tag, terminal)
+            parent = self.node_by_id[parent_id]
+            if parent is None:
+                print("Terminal is a child of the root: '%s'" % text, file=sys.stderr)
+                parent = l1.add_fnode(parent, edge_tag)
+            parent.add(edge_tag, terminal)
 
         return p
 
