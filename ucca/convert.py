@@ -1184,17 +1184,28 @@ class ExportConverter(FormatConverter):
         self.linkages = defaultdict(list)
         self.terminals = []
         self.node_ids_with_children = set()
+
+    @staticmethod
+    def _split_tags(tag, edge_tag):
+        # UPARSE writes both into the node tag field, separated by "-", and the edge tag as "--"
+        if edge_tag == "--":
+            tag, _, edge_tag = tag.partition("-")
+        return tag, edge_tag
     
     def _read_line(self, line):
         fields = line.split()
-        m = re.match("#(\d+)", fields[0])
+        text, tag = fields[:2]
+        m = re.match("#(\d+)", text)
         if not m:  # does not start with a # and a number; then it is a terminal
             parent_id = fields[4]
             self.node_ids_with_children.add(parent_id)
-            self.terminals.append(fields[:5])
+            edge_tag, parent_id = fields[3:5]
+            tag, edge_tag = self._split_tags(tag, edge_tag)
+            self.terminals.append((text, tag, edge_tag, parent_id))
             return
         node_id = m.group(1)
         for edge_tag, parent_id in zip(fields[3::2], fields[4::2]):
+            _, edge_tag = self._split_tags(tag, edge_tag)
             self.node_ids_with_children.add(parent_id)
             if parent_id == "0":
                 self.node_by_id[node_id] = None  # root node: to add to it, we add to None
@@ -1232,7 +1243,7 @@ class ExportConverter(FormatConverter):
             l1.add_linkage(link_relation, *link_arguments)
 
         # add terminals
-        for text, tag, _, edge_tag, parent_id in self.terminals:
+        for text, tag, edge_tag, parent_id in self.terminals:
             punctuation = (tag == layer0.NodeTags.Punct)
             terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
             parent = self.node_by_id[parent_id]
