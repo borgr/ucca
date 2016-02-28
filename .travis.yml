@@ -19,11 +19,11 @@ script:
   - test_files/test_convert_toy.sh
 #  - test_files/test_convert_all.sh
   - python parsing/parse.py -I 10 -t doc/toy.xml -d doc/toy.xml -vm model_toy
-  - python parsing/parse.py doc/toy.xml -vm model_toy
+  - python parsing/parse.py doc/toy.xml -evm model_toy
   - python parsing/parse.py -I 10 -t doc/toy.xml -d doc/toy.xml -svm model_toy_sentences
-  - python parsing/parse.py doc/toy.xml -svm model_toy_sentences
+  - python parsing/parse.py doc/toy.xml -esvm model_toy_sentences
   - python parsing/parse.py -I 10 -t doc/toy.xml -d doc/toy.xml -avm model_toy_paragraphs
-  - python parsing/parse.py doc/toy.xml -svm model_toy_paragraphs
+  - python parsing/parse.py doc/toy.xml -esvm model_toy_paragraphs
 # Uncomment this to train on the full training set (takes ~30 minutes):
 #  - python parsing/parse.py -t pickle/train -d pickle/dev -bm model
 # Uncomment this to test on the full test set:
