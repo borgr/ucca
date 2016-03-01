@@ -15,7 +15,7 @@ unit)
     python parsing/parse.py doc/toy.xml -esvm model_toy_paragraphs
     ;;
 parse_all)
-    python parsing/parse.py -Webs pickle/test -t pickle/train -d pickle/dev -m model
+    python parsing/parse.py -WeLMCbs pickle/test -t pickle/train -d pickle/dev -m model
     ;;
 convert_all)
     ci/test_convert_all.sh
