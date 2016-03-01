@@ -18,6 +18,22 @@ desc = """Prints statistics on UCCA passages
 """
 
 
+def get_height(passage):
+    nodes = [passage.layer(layer1.LAYER_ID).heads[0]]
+    nodes[0].depth = 0
+    max_depth = 0
+    while nodes:
+        node = nodes.pop()
+        if node.depth > max_depth:
+            max_depth = node.depth
+        for child in node.children:
+            if hasattr(child, "depth") and child.depth >= node.depth + 1:
+                continue
+            child.depth = node.depth + 1
+            nodes.append(child)
+    return max_depth
+
+
 def main():
     argparser = argparse.ArgumentParser(description=desc)
     argparser.add_argument("-f", "--filenames", nargs="+", help="files to process")
@@ -34,6 +50,7 @@ def main():
         sentence_counts = []
         discontiguous_counts = []
         multiple_parents_counts = []
+        heights = []
         for pattern in args.filenames:
             for filename in glob.glob(pattern):
                 #  sys.stderr.write("Reading passage '%s'...\n" % filename)
@@ -55,9 +72,11 @@ def main():
                 print(passage.ID + "\t" + "\t".join(str(node) for node in discontiguous))
                 multiple_parents = [node for node in non_terminals if len(node.incoming) > 1]
                 multiple_parents_counts.append(len(multiple_parents))
+                heights.append(get_height(passage))
         data = np.array((ids, terminal_counts, non_terminal_counts, edge_counts,
                          paragraph_counts, sentence_counts,
-                         discontiguous_counts, multiple_parents_counts), dtype=int).T
+                         discontiguous_counts, multiple_parents_counts,
+                         heights), dtype=int).T
         if args.outfile:
             np.savetxt(args.outfile, data[data[:, 0].argsort()], fmt="%i")
     elif args.infile:
