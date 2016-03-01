@@ -16,11 +16,9 @@ def main():
     argparser.add_argument('outfile', nargs="?", help="tsv file to write (if missing, <infile>.tsv)")
     args = argparser.parse_args()
 
-    d = util.load(args.infile)
     model = averaged_perceptron.AveragedPerceptron()
-    model.load(d["model"])
-    model.write(args.outfile or os.path.splitext(args.infile)[0] + ".tsv",
-                [str(a) for a in d["actions"]])
+    model.load(args.infile, util)
+    model.write(args.outfile or os.path.splitext(args.infile)[0] + ".tsv")
 
     sys.exit(0)
 
