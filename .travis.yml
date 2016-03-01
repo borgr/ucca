@@ -1,30 +1,16 @@
 language: python
-python:
-  - "3.4"
+python: "3.4"
 sudo: false
-# command to install dependencies
-install: pip install -r requirements.txt
-# command to prepare for tests
+before_install: pip install -r requirements.txt
 before_script:
-# Uncomment this to get the full corpus (required to train/test on it):
-#  - curl -O http://www.cs.huji.ac.il/~danielh/ucca/ucca_corpus_pickle.tgz
-#  - mkdir pickle
-#  - tar xvzf ucca_corpus_pickle.tgz -C pickle
-#  - python scripts/split_corpus.py pickle
+  - mkdir pickle
+  - curl -L http://www.cs.huji.ac.il/~danielh/ucca/ucca_corpus_pickle.tgz | tar xz -C pickle
+  - python scripts/split_corpus.py -l pickle
   - python setup.py install
   - python -m nltk.downloader averaged_perceptron_tagger punkt
-# command to run tests
-script:
-  - python -m unittest discover -v
-  - test_files/test_convert_toy.sh
-#  - test_files/test_convert_all.sh
-  - python parsing/parse.py -I 10 -t doc/toy.xml -d doc/toy.xml -vm model_toy
-  - python parsing/parse.py doc/toy.xml -evm model_toy
-  - python parsing/parse.py -I 10 -t doc/toy.xml -d doc/toy.xml -svm model_toy_sentences
-  - python parsing/parse.py doc/toy.xml -esvm model_toy_sentences
-  - python parsing/parse.py -I 10 -t doc/toy.xml -d doc/toy.xml -avm model_toy_paragraphs
-  - python parsing/parse.py doc/toy.xml -esvm model_toy_paragraphs
-# Uncomment this to train on the full training set (takes ~30 minutes):
-#  - python parsing/parse.py -t pickle/train -d pickle/dev -bm model
-# Uncomment this to test on the full test set:
-#  - python parsing/parse.py pickle/test -bm model
+env:
+  - TEST_SUITE=unit
+  - TEST_SUITE=parse_all
+  - TEST_SUITE=convert_all
+script: ci/test.sh
+
