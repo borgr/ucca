@@ -19,6 +19,8 @@ parse_all)
     ;;
 convert_all)
     ci/test_convert_all.sh
+    ;;
+convert_all_sentences)
     ci/test_convert_all_sentences.sh
     ;;
 esac
