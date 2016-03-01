@@ -12,5 +12,6 @@ env:
   - TEST_SUITE=unit
   - TEST_SUITE=parse_all
   - TEST_SUITE=convert_all
+  - TEST_SUITE=convert_all_sentences
 script: ci/test.sh
 
