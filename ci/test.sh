@@ -21,6 +21,8 @@ convert_all)
     ci/test_convert_all.sh
     ;;
 convert_all_sentences)
+    mkdir -p pickle/sentences
+    python scripts/standard_to_sentences.py pickle/*.pickle -o pickle/sentences -p "ucca_passage" -b
     ci/test_convert_all_sentences.sh
     ;;
 esac
