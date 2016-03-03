@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 
-from parsing import util, averaged_perceptron
+from parsing import util, perceptron
 
 desc = """Reads a model file in pickle format and writes as TSV
 """
@@ -16,7 +16,7 @@ def main():
     argparser.add_argument('outfile', nargs="?", help="tsv file to write (if missing, <infile>.tsv)")
     args = argparser.parse_args()
 
-    model = averaged_perceptron.AveragedPerceptron()
+    model = perceptron.Perceptron()
     model.load(args.infile, util)
     model.write(args.outfile or os.path.splitext(args.infile)[0] + ".tsv")
 
