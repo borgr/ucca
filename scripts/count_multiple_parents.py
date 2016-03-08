@@ -71,8 +71,11 @@ def main():
         handle.writelines(["%s\t%d\n" % (num, count) for num, count in counter.items()])
         if handle is not sys.stdout:
             handle.close()
-        plot_histogram(counter, label, plot=args.plot)
-        plot_pie(counter, label, plot=args.plot)
+        try:
+            plot_histogram(counter, label, plot=args.plot)
+            plot_pie(counter, label, plot=args.plot)
+        except:
+            pass
 
     sys.exit(0)
 

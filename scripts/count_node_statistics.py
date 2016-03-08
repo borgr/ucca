@@ -45,7 +45,9 @@ def main():
         ids = []
         terminal_counts = []
         non_terminal_counts = []
+        implicit_counts = []
         edge_counts = []
+        remote_edge_counts = []
         paragraph_counts = []
         sentence_counts = []
         discontiguous_counts = []
@@ -60,8 +62,14 @@ def main():
                 terminal_counts.append(len(terminals))
                 non_terminals = passage.layer(layer1.LAYER_ID).all
                 non_terminal_counts.append(len(non_terminals))
+                implicits = [node for node in non_terminals if
+                             node.attrib.get("implicit")]
+                implicit_counts.append(len(implicits))
                 edges = {edge for node in non_terminals for edge in node}
                 edge_counts.append(len(edges))
+                remote_edges = {edge for node in non_terminals for edge in node
+                                if edge.attrib.get("remote")}
+                remote_edge_counts.append(len(remote_edges))
                 paragraphs = {terminal.paragraph for terminal in terminals}
                 paragraph_counts.append(len(paragraphs))
                 sentence_counts.append(len(break2sentences(passage)))
@@ -76,6 +84,7 @@ def main():
         data = np.array((ids, terminal_counts, non_terminal_counts, edge_counts,
                          paragraph_counts, sentence_counts,
                          discontiguous_counts, multiple_parents_counts,
+                         implicit_counts, remote_edge_counts,
                          heights), dtype=int).T
         if args.outfile:
             np.savetxt(args.outfile, data[data[:, 0].argsort()], fmt="%i")
