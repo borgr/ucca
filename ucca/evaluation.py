@@ -21,6 +21,8 @@ EQUIV = ((EdgeTags.Process, EdgeTags.State),
 
 # RELATORS = ["that", "than", "who", "what", "to", "how", "of"]
 
+FLATTEN_CENTERS = False
+
 ##############################################################################
 # UTILITY MEdgeTagsHODS
 ##############################################################################
@@ -354,7 +356,7 @@ def get_scores(p1, p2, eval_type, units, fscore, errors, verbose=True):
             print(get_text(p1, y))
 
     if fscore:
-        res = EvaluatorResults(SummaryStatistics(len(mutual),
+        res = EvaluatorResults(SummaryStatistics(1 + len(mutual),  # Count root as mutual
                                                  len(all1 - mutual),
                                                  len(all2 - mutual)),
                                SummaryStatistics(len(mutual_rem),
@@ -381,9 +383,10 @@ def evaluate(guessed_passage, ref_passage, verbose=True, units=True, fscore=True
     :param errors: whether to print the mistakes
     :return: Scores object
     """
-    for passage in (guessed_passage, ref_passage):
-        if passage is not None:
-            flatten_centers(passage)  # flatten Cs inside Cs
+    if FLATTEN_CENTERS:
+        for passage in (guessed_passage, ref_passage):
+            if passage is not None:
+                flatten_centers(passage)  # flatten Cs inside Cs
     return Scores((evaluation_type,
                    get_scores(guessed_passage, ref_passage, evaluation_type,
                               units, fscore, errors, verbose))
