@@ -53,8 +53,8 @@ def main():
             output, passage_id = convert_passage(filename, converter, args)
             outfile = "%s.%s" % (args.outdir + os.path.sep + args.prefix + passage_id, args.format)
             sys.stderr.write("Writing '%s'...\n" % outfile)
-            with open(outfile, "w") as f:
-                f.write(output + "\n")
+            with open(outfile, "w", encoding="utf-8") as f:
+                print(output, file=f)
 
     sys.exit(0)
 
