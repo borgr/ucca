@@ -2,7 +2,7 @@
 """
 The evaluation software for UCCA layer 1.
 """
-from collections import Counter
+from collections import Counter, defaultdict
 from operator import attrgetter
 
 from ucca.layer1 import EdgeTags, NodeTags
@@ -18,6 +18,11 @@ EQUIV = ((EdgeTags.Process, EdgeTags.State),
          (EdgeTags.ParallelScene, EdgeTags.Center),
          (EdgeTags.Connector, EdgeTags.Linker),
          (EdgeTags.Function, EdgeTags.Relator))
+
+EXCLUDED = (EdgeTags.Punctuation,
+            EdgeTags.LinkArgument,
+            EdgeTags.LinkRelation,
+            EdgeTags.Terminal)
 
 # RELATORS = ["that", "than", "who", "what", "to", "how", "of"]
 
@@ -185,21 +190,14 @@ def create_passage_yields(p, remote_terminals=False):
        and punctuation) is that set.
     """
     l1 = p.layer("1")
-    edges = []
-    for node in l1.all:
-        edges.extend(e for e in node if e.tag not in (EdgeTags.Punctuation,
-                                                      EdgeTags.LinkArgument,
-                                                      EdgeTags.LinkRelation,
-                                                      EdgeTags.Terminal))
+    edges = [e for n in l1.all for e in n if e.tag not in EXCLUDED]
 
-    table_reg, table_remote = dict(), dict()
+    table_reg, table_remote = defaultdict(list), defaultdict(list)
     for e in edges:
-        pos = frozenset(t.position for t in e.child.get_terminals(punct=False, remotes=remote_terminals)
-                        if t not in get_terminal_by_tag(e.child, EdgeTags.Function, False, remote_terminals))
-        if e.attrib.get("remote"):
-            table_remote[pos] = table_remote.get(pos, []) + [e]
-        else:
-            table_reg[pos] = table_reg.get(pos, []) + [e]
+        pos = frozenset(t.position for t in
+                        e.child.get_terminals(punct=False, remotes=remote_terminals))
+        table = table_remote if e.attrib.get("remote") else table_reg
+        table[pos].append(e)
     return table_reg, table_remote
 
 
