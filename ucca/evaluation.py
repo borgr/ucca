@@ -179,10 +179,11 @@ def get_terminal_by_tag(fnode, tag, punct, remote_terminals, terminals = None):
     return terminals
 
 
-def create_passage_yields(p, remote_terminals=False):
+def create_passage_yields(p, remote_terminals=False, implicit=False):
     """
     :param p: passage to find yields of
     :param remote_terminals: if True, regular table includes remotes
+    :param implicit: if true, regular table includes the empty yield of implicit nodes
     :returns two dicts:
     1. maps a set of terminal indices (excluding punctuation) to a list of layer1 edges whose yield (excluding remotes
        and punctuation) is that set.
@@ -190,7 +191,8 @@ def create_passage_yields(p, remote_terminals=False):
        and punctuation) is that set.
     """
     l1 = p.layer("1")
-    edges = [e for n in l1.all for e in n if e.tag not in EXCLUDED]
+    edges = (e for n in l1.all for e in n if e.tag not in EXCLUDED and
+             (implicit or not e.child.attrib.get("implicit")))
 
     table_reg, table_remote = defaultdict(list), defaultdict(list)
     for e in edges:
