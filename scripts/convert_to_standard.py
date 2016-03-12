@@ -50,7 +50,7 @@ def main():
             if converter is None:
                 raise IOError("Unknown extension '%s'. Specify format using -f" % ext)
 
-            with open(filename) as f:
+            with open(filename, encoding="utf-8") as f:
                 for passage in converter(f, passage_id, args.split):
                     outfile = "%s/%s.%s" % (args.outdir, args.prefix + passage.ID,
                                             "pickle" if args.binary else "xml")
