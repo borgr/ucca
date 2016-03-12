@@ -904,7 +904,7 @@ class DependencyConverter(FormatConverter):
                 head = dep_node.incoming[0].head
                 if layer0.is_punct(head.terminal) and head.incoming and \
                         head.incoming[0].head.incoming:
-                    head = head.head  # do not put terminals and punctuation together
+                    head = head.incoming[0].head  # do not put terminals and punctuation together
                 if head.preterminal is None:
                     head.preterminal = l1.add_fnode(None, self._label_edge(head))
                 dep_node.preterminal = head.preterminal  # only edges to layer 0 can be Terminal
