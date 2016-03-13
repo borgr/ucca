@@ -22,7 +22,7 @@ def main():
     args = argparser.parse_args()
 
     print("id,passages,paragraphs,sentences,nodes,terminals,non-terminals,implicit,linkage,discont,"
-          "edges,primary,remote,linkage,parents,children")
+          "edges,primary,remote,linkage,parents,children,mult-parents")
     data = []
     for pattern in args.filenames:
         for filename in glob.glob(pattern):
@@ -50,6 +50,7 @@ def main():
                       len(linkage_edges),
                       sum(len([p for p in n.parents if p.ID != "1.1"]) for n in non_linkage),
                       sum(len(n.children) for n in non_linkage),
+                      len([n for n in non_linkage if len([p for p in n.parents if p.ID != "1.1"]) > 1]),
                       )
             print(",".join("%d" % f for f in fields))
             data.append(fields)
