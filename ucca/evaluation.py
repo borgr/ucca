@@ -254,17 +254,14 @@ class Scores(object):
             self.evaluators[eval_type].print()
 
     def fields(self):
-        e = self.evaluators
+        e = self.evaluators[LABELED]
         return ["%.3f" % float(p) for p in
-                (e[LABELED].regular.f1,      e[LABELED].remotes.f1,
-                 e[UNLABELED].regular.f1,    e[UNLABELED].remotes.f1,
-                 e[WEAK_LABELED].regular.f1, e[WEAK_LABELED].remotes.f1)]
+                (e.regular.p, e.regular.r, e.regular.f1, e.remotes.p, e.remotes.r, e.remotes.f1)]
 
     @staticmethod
     def field_titles():
-        return ["regular labeled f1", "remote labeled f1",
-                "regular unlabeled f1", "remote unlabeled f1",
-                "regular weakly labeled f1", "remote weakly labeled f1"]
+        return ["regular labeled precision", "regular labeled recall", "regular labeled f1",
+                "remote labeled precision", "remote labeled recall", "remote labeled f1"]
 
 
 class EvaluatorResults(object):
@@ -305,7 +302,7 @@ class SummaryStatistics(object):
         self.r = "NaN" if self.num_ref == 0 else 1.0 * num_matches / self.num_ref
         if "NaN" in (self.p, self.r):
             self.f1 = "NaN"
-        elif (self.p, self.r) == (0, 0):
+        elif self.p == 0.0:
             self.f1 = 0.0
         else:
             self.f1 = 2.0 * self.p * self.r / float(self.p + self.r)
