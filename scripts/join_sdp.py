@@ -23,7 +23,7 @@ def main():
 
     lines = [args.prefix + args.header + "\n"]
     for pattern in args.filenames:
-        filenames = glob.glob(pattern)
+        filenames = sorted(glob.glob(pattern))
         if not filenames:
             raise IOError("Not found: " + pattern)
         for filename in filenames:
