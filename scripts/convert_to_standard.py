@@ -32,6 +32,8 @@ def main():
                            help="split each sentence to its own passage")
     argparser.add_argument("-t", "--tree", action="store_true",
                            help="currently unused")
+    argparser.add_argument("-m", "--markaux", action="store_true",
+                           help="mark auxiliary edges introduced on conversion")
     args = argparser.parse_args()
 
     for pattern in args.filenames:
@@ -51,7 +53,7 @@ def main():
                 raise IOError("Unknown extension '%s'. Specify format using -f" % ext)
 
             with open(filename, encoding="utf-8") as f:
-                for passage in converter(f, passage_id, args.split):
+                for passage in converter(f, passage_id, args.split, args.markaux):
                     outfile = "%s/%s.%s" % (args.outdir, args.prefix + passage.ID,
                                             "pickle" if args.binary else "xml")
                     sys.stderr.write("Writing '%s'...\n" % outfile)

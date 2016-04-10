@@ -813,9 +813,10 @@ class DependencyConverter(FormatConverter):
             self.tag = tag
             self.paragraph = None
 
-    def __init__(self):
+    def __init__(self, mark_aux=False):
         self.dep_nodes = None
         self.sentence_id = None
+        self.mark_aux = mark_aux
 
     @staticmethod
     def _read_line(line):
@@ -832,8 +833,7 @@ class DependencyConverter(FormatConverter):
             for edge in dep_node.incoming:
                 edge.link_head(heads)
 
-    @staticmethod
-    def _omit_edge(edge):
+    def _omit_edge(self, edge):
         return False
         
     @staticmethod
@@ -860,7 +860,7 @@ class DependencyConverter(FormatConverter):
                 for n in sorted(level_nodes, key=lambda x: x.terminal.position)]
 
     @staticmethod
-    def _label_edge(node):
+    def _label(node):
         dependent_rels = {e.rel for e in node.outgoing}
         if layer0.is_punct(node.terminal):
             return EdgeTags.Punctuation
@@ -870,6 +870,9 @@ class DependencyConverter(FormatConverter):
             return EdgeTags.Process
         else:
             return EdgeTags.Center
+
+    def _label_edge(self, node):
+        return ("#" if self.mark_aux else "") + self._label(node)
 
     def _init_nodes(self, passage_id):
         self.passage_id = passage_id
@@ -1097,6 +1100,9 @@ class DependencyConverter(FormatConverter):
 
 
 class ConllConverter(DependencyConverter):
+    def __init__(self, *args, **kwargs):
+        super(ConllConverter, self).__init__(*args, **kwargs)
+
     @staticmethod
     def _read_line(line):
         fields = line.split()
@@ -1123,12 +1129,14 @@ class ConllConverter(DependencyConverter):
             fields += ["_", "_"]   # projective head, projective dependency relation (optional)
             yield fields
 
-    @staticmethod
-    def _omit_edge(edge):
+    def _omit_edge(self, edge):
         return edge.tag == EdgeTags.LinkArgument or edge.attrib.get("remote")
 
 
 class SdpConverter(DependencyConverter):
+    def __init__(self, *args, **kwargs):
+        super(SdpConverter, self).__init__(*args, **kwargs)
+
     @staticmethod
     def _read_line(line):
         fields = line.split()
@@ -1157,6 +1165,9 @@ class SdpConverter(DependencyConverter):
                 fields += ["-", pred, "_"] + \
                           [heads.get(pred, "_") for pred in preds]  # rel for each pred
             yield fields
+
+    def _omit_edge(self, edge):
+        return self.mark_aux and edge.tag.startswith("#")
 
         
 class ExportConverter(FormatConverter):
@@ -1333,29 +1344,31 @@ def to_conll(passage, test=False, *args, **kwargs):
     return ConllConverter().to_format(passage, test)
 
 
-def from_sdp(lines, passage_id, split=False, *args, **kwargs):
+def from_sdp(lines, passage_id, split=False, mark_aux=False, *args, **kwargs):
     """Converts from parsed text in SemEval 2015 SDP format to a Passage object.
 
     :param lines: iterable of lines in SDP format, describing a single passage.
     :param passage_id: ID to set for passage
     :param split: split each sentence to its own passage?
+    :param mark_aux: add a preceding # for labels of auxiliary edges added
 
     :return a Passage object.
     """
     del args, kwargs
-    return SdpConverter().from_format(lines, passage_id, split)
+    return SdpConverter(mark_aux=mark_aux).from_format(lines, passage_id, split)
 
 
-def to_sdp(passage, test=False, *args, **kwargs):
+def to_sdp(passage, test=False, mark_aux=False, *args, **kwargs):
     """ Convert from a Passage object to a string in SemEval 2015 SDP format (sdp)
 
     :param passage: the Passage object to convert
     :param test: whether to omit the top, head, frame, etc. columns. Defaults to False
+    :param mark_aux: omit edges with labels with a preceding #
 
     :return list of lines representing the semantic dependencies in the passage
     """
     del args, kwargs
-    return SdpConverter().to_format(passage, test)
+    return SdpConverter(mark_aux=mark_aux).to_format(passage, test)
 
 
 def from_export(lines, passage_id=None, split=False, *args, **kwargs):

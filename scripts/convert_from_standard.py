@@ -21,7 +21,8 @@ def convert_passage(filename, converter, args):
     """
     passage = file2passage(filename)
     passages = convert.split2sentences(passage) if args.sentences else [passage]
-    output = "\n".join(line for p in passages for line in converter(p, args.test, args.tree))
+    output = "\n".join(line for p in passages for line in
+                       converter(p, args.test, args.tree, args.markaux))
     return output, passage.ID
 
 
@@ -42,6 +43,8 @@ def main():
                            help="split passages to sentences")
     argparser.add_argument("-T", "--tree", action="store_true",
                            help="remove multiple parents to get a tree")
+    argparser.add_argument("-m", "--markaux", action="store_true",
+                           help="omit marked auxiliary edges")
     args = argparser.parse_args()
 
     converter = convert.TO_FORMAT[args.format]
