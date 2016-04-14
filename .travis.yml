@@ -1,13 +1,29 @@
+cache: apt
+sudo: false
 language: python
 python: "3.4"
-sudo: false
-before_install: pip install -r requirements.txt
+addons:
+  apt:
+    packages:
+    - libatlas-dev
+    - libatlas-base-dev
+    - liblapack-dev
+    - gfortran
+before_install:
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - conda update --yes conda
+install:
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy scipy
+  - pip install pytest-pep8 pytest-cov python-coveralls
+  - pip install -r requirements.txt
+  - python -m nltk.downloader averaged_perceptron_tagger punkt
+  - python setup.py install
 before_script:
   - mkdir pickle
   - curl -L http://www.cs.huji.ac.il/~danielh/ucca/ucca_corpus_pickle.tgz | tar xz -C pickle
   - python scripts/split_corpus.py -l pickle
-  - python setup.py install
-  - python -m nltk.downloader averaged_perceptron_tagger punkt
 env:
   - TEST_SUITE=unit
   - TEST_SUITE=parse_all
