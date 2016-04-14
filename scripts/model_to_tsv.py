@@ -5,8 +5,8 @@ import os
 import sys
 
 from parsing import util
-from parsing.classifier.dense_perceptron import DensePerceptron
-from parsing.classifier.sparse_perceptron import SparsePerceptron
+from parsing.classifiers.dense_perceptron import DensePerceptron
+from parsing.classifiers.sparse_perceptron import SparsePerceptron
 
 desc = """Reads a model file in pickle format and writes as TSV
 """
