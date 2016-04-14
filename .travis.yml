@@ -1,7 +1,8 @@
 cache: apt
 sudo: false
 language: python
-python: "3.4"
+python:
+  - "3.4"
 addons:
   apt:
     packages:
@@ -28,5 +29,7 @@ env:
   - TEST_SUITE=unit
   - TEST_SUITE=parse_all
   - TEST_SUITE=convert_all
-script: ci/test.sh
-
+script:
+  - ci/test.sh
+after_success:
+  - coveralls
