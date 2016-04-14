@@ -8,5 +8,6 @@ setup(name='UCCA',
       author='Daniel Hershcovich',
       author_email='danielh@cs.huji.ac.il',
       url='http://www.cs.huji.ac.il/~oabend/ucca.html',
-      packages=['ucca', 'scenes', 'scripts', 'parsing'],
+      packages=['ucca', 'scenes', 'scripts', 'parsing',
+          'parsing.classifiers', 'parsing.features', 'parsing.state'],
       )
