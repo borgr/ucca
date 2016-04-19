@@ -17,7 +17,7 @@ before_install:
   - conda update --yes conda
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy scipy
-  - pip install pytest-pep8 pytest-cov python-coveralls
+  - pip install pytest-pep8
   - pip install -r requirements.txt
   - python -m nltk.downloader averaged_perceptron_tagger punkt
   - python setup.py install
@@ -31,5 +31,3 @@ env:
   - TEST_SUITE=convert_all
 script:
   - ci/test.sh
-after_success:
-  - coveralls
