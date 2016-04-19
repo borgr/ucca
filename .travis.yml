@@ -22,12 +22,15 @@ install:
   - python -m nltk.downloader averaged_perceptron_tagger punkt
   - python setup.py install
 before_script:
-  - mkdir pickle
+  - mkdir pickle word_vectors
   - curl -L http://www.cs.huji.ac.il/~danielh/ucca/ucca_corpus_pickle.tgz | tar xz -C pickle
+  - curl -L http://www.cs.huji.ac.il/~danielh/ucca/w2v.tgz | tar xz -C word_vectors
   - python scripts/split_corpus.py -l pickle
 env:
   - TEST_SUITE=unit
-  - TEST_SUITE=parse_all
-  - TEST_SUITE=convert_all
+  - TEST_SUITE=sparse
+  - TEST_SUITE=dense
+  - TEST_SUITE=nn
+  - TEST_SUITE=convert
 script:
   - ci/test.sh

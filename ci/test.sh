@@ -14,13 +14,19 @@ unit)
     python parsing/parse.py -I 10 -t doc/toy.xml -d doc/toy.xml -avm model_toy_paragraphs
     python parsing/parse.py doc/toy.xml -esvm model_toy_paragraphs
     ;;
-parse_all)
-    python parsing/parse.py -WeLMCbs pickle/test -t pickle/train -d pickle/dev
+sparse)
+    python parsing/parse.py -c sparse -WeLMCbs pickle/dev -t pickle/train -d pickle/dev
     ;;
-convert_all)
+dense)
+    python parsing/parse.py -c dense -w word_vectors/sskip.100.vectors.txt -WeLMCbs pickle/dev -t pickle/train -d pickle/dev
+    ;;
+nn)
+    python parsing/parse.py -c nn -w word_vectors/sskip.100.vectors.txt -WeLMCbs pickle/dev -t pickle/train -d pickle/dev
+    ;;
+convert)
     ci/test_convert_all.sh
     ;;
-convert_all_sentences)
+convert_sentences)
     mkdir -p pickle/sentences
     python scripts/standard_to_sentences.py pickle/*.pickle -o pickle/sentences -p "ucca_passage" -b
     ci/test_convert_all_sentences.sh
