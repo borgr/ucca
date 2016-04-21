@@ -21,7 +21,7 @@ dense)
     python parsing/parse.py -c dense -w word_vectors/sskip.100.vectors.txt -WeLMCbs pickle/dev -t pickle/train -d pickle/dev
     ;;
 nn)
-    python parsing/parse.py -c nn -w word_vectors/sskip.100.vectors.txt -WeLMCbs pickle/dev -t pickle/train -d pickle/dev
+    python parsing/parse.py -c nn -WeLMCbs pickle/dev -t pickle/train -d pickle/dev
     ;;
 convert)
     ci/test_convert_all.sh
