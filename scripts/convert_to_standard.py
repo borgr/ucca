@@ -19,7 +19,7 @@ Each passage is written to the file:
 def main():
     argparser = argparse.ArgumentParser(description=desc)
     argparser.add_argument("filenames", nargs="+",
-                           help="CoNLL file names to convert")
+                           help="file names to convert")
     argparser.add_argument("-f", "--format", choices=convert.CONVERTERS,
                            help="input file format")
     argparser.add_argument("-o", "--outdir", default=".",
@@ -30,7 +30,7 @@ def main():
                            help="write in pickle binary format (.pickle)")
     argparser.add_argument("-s", "--split", action="store_true",
                            help="split each sentence to its own passage")
-    argparser.add_argument("-t", "--tree", action="store_true",
+    argparser.add_argument("-T", "--tree", action="store_true",
                            help="currently unused")
     argparser.add_argument("-m", "--markaux", action="store_true",
                            help="mark auxiliary edges introduced on conversion")
