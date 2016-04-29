@@ -388,4 +388,3 @@ def evaluate(guessed_passage, ref_passage, verbose=True, units=True, fscore=True
                    get_scores(guessed_passage, ref_passage, evaluation_type,
                               units, fscore, errors, verbose))
                   for evaluation_type in EVAL_TYPES)
-
