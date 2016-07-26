@@ -9,8 +9,9 @@ import re
 import string
 import zss
 from ucca import layer0, layer1
-
 import inspect
+
+EMPTY_WORD = "emptyWord"
 
 def compare(n1, n2):
 	return bool(labels(n1) & labels(n2))
@@ -75,7 +76,7 @@ def align(sen1, sen2, string=True):
 		longer = sen2
 		switched = True
 		length_dif = abs(length_dif)
-	shorter += ["emptyWord"] * length_dif
+	shorter += [EMPTY_WORD] * length_dif
 
 	#create matrix	
 	matrix = np.zeros((len(longer), len(longer)))
@@ -435,7 +436,9 @@ def fully_aligned_distance(p1, p2):
 
 MAIN_RELATIONS = [layer1.EdgeTags.ParallelScene,
 					   layer1.EdgeTags.Participant,
-					   layer1.EdgeTags.Adverbial
+					   layer1.EdgeTags.Adverbial,
+					   layer1.EdgeTags.State,
+					   layer1.EdgeTags.Process
 					  ]
 
 def token_matches(p1, p2, map_by):
