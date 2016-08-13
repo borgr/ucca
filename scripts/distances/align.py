@@ -54,13 +54,17 @@ def preprocess_word(word):
 	return word.strip().lower()
 
 
+def word_tokenize(s):
+	"""tokenizes a sentence to words list"""
+	return re.split("\W", s)
+
 def align(sen1, sen2, string=True):
 	"""finds the best mapping of words from one sentence to the other
 	string = a boolean represents if sentences are given as strings or as list of ucca terminal nodes
 	returns list of word tuples and the corresponding list of indexes tuples"""
 	if string:
-		sen1 = list(map(preprocess_word, sen1.split()))
-		sen2 = list(map(preprocess_word, sen2.split()))
+		sen1 = list(map(preprocess_word, word_tokenize(sen1)))
+		sen2 = list(map(preprocess_word, word_tokenize(sen2)))
 	else:
 		sen1 = [preprocess_word(terminal.text) for terminal in sen1]
 		sen2 = [preprocess_word(terminal.text) for terminal in sen2]
