@@ -53,14 +53,21 @@ def preprocess_word(word):
 	"""standardize word form for the alignment task"""
 	return word.strip().lower()
 
+def regularize_word(word):
+	"""changes structure of the word to the same form (e.g. lowercase)"""
+
+	#remove non-alphanumeric
+	pattern = re.compile("[\W_]+")
+	word = pattern.sub("", word)
+	return word
 
 def word_tokenize(s):
 	"""tokenizes a sentence to words list"""
 	return re.split("\W", s)
 
 def align(sen1, sen2, string=True):
-	"""finds the best mapping of words from one sentence to the other
-	string = a boolean represents if sentences are given as strings or as list of ucca terminal nodes
+	"""finds the best mapping of words from one sentence to the another
+	string = a boolean representing if sentences are given as strings or as list of ucca terminal nodes
 	returns list of word tuples and the corresponding list of indexes tuples"""
 	if string:
 		sen1 = list(map(preprocess_word, word_tokenize(sen1)))
@@ -106,15 +113,6 @@ def align(sen1, sen2, string=True):
 			refactored_indexes.append((i + start, j + start))
 			mapping.append((longer[i], shorter[j]))
 	return mapping, refactored_indexes
-
-
-def regularize_word(word):
-	"""changes structure of the word to the same form (e.g. lowercase)"""
-
-	#remove non-alphanumeric
-	pattern = re.compile("[\W_]+")
-	word = pattern.sub("", word)
-	return word
 
 
 def _to_text(passage, position):
@@ -221,7 +219,7 @@ def fully_align(p1, p2, word2word=None):
 
 
 def top_down_align(p1, p2, word2word=None):
-	"""aligns nodes from p1 to those of p2 top down"""
+	"""aligns nodes from p1 to those of p2 top down (best nodes pairing to tuples in each level)"""
 	if not word2word:
 		word2word = align_yields(p1, p2)
 	new = align_nodes(top_from_passage(p1), top_from_passage(p2), word2word)
@@ -256,7 +254,7 @@ def buttom_up_by_levels_align(p1, p2, word2word=None):
 
 
 def buttom_up_paragraph_align(p1, p2, word2word=None):
-	""" aligns all the nodes in two paragraphs going up from the terminals level by level"""
+	""" aligns all the nodes in two paragraphs going up from the terminals level by level, and adding nodes one by one"""
 	if not word2word:
 		word2word = align_yields(p1, p2)
 	pairs1 = dict(p1.layer(layer0.LAYER_ID).pairs)
@@ -286,7 +284,6 @@ def buttom_up_paragraph_align(p1, p2, word2word=None):
 						waiting.add(n1)
 						best = -1
 						is_wating = True
-						# print(n1)
 						break
 					if mapping[child] in n.children:
 						current += 1
@@ -420,11 +417,11 @@ def align_yields(p1, p2):
 			sentence_start2 = positions2[i]
 		return mapping
 	else:
-		print("Error number of sentences aqquired from break2common_sentences dow not match")
+		print("Error number of sentences aqquired from break2common_sentences does not match")
 
 
 def fully_aligned_distance(p1, p2):
-	"""compares each one to its' best mapping"""
+	"""compares each node to its' best mapping"""
 	word2word = align_yields(p1, p2)
 	nodes1 = set(node for node in p1.layer(layer1.LAYER_ID).all if is_comparable(node))
 	nodes2 = set(node for node in p2.layer(layer1.LAYER_ID).all if is_comparable(node))
@@ -551,11 +548,13 @@ def create_ordered_trees(p1, p2, word2word=None):
 	mapping = align_nodes(top1, top2, word2word)
 	tree1 = []
 	tree2 = []
+	# add the top nodes
+		# matching nodes
 	for s in top_from_passage(p1):
 		if s in mapping and mapping[s] not in tree2:
 			tree1.append(s)
 			tree2.append(mapping[s])
-
+		# unmatched nodes from each passage
 	for s in top_from_passage(p1):
 		if s not in tree1:
 			tree1.append(s)
@@ -625,8 +624,8 @@ def token_level_analysis(ps):
 
 def aligned_top_down_distance(p1, p2):
 	"""starts from the heads of both passages
-	   and finds the amount of nodes 
-	   containing the same labeles for children"""
+	   and finds  top down the amount of nodes in the cut
+	   mapped to each other and have the same label"""
 	word2word = align_yields(p1, p2)
 	remaining = align_nodes(top_from_passage(p1), top_from_passage(p2), word2word)
 	uncounted = {}
