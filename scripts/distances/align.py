@@ -6,6 +6,7 @@ import numpy as np
 from textutil import break2sentences, extract_terminals
 import evaluation
 import re
+import sys
 import string
 import zss
 from ucca import layer0, layer1
@@ -40,8 +41,8 @@ def is_passage(n):
 
 def is_comparable(n):
 	"""checks if the node is a node that should be compared between passages"""
-	return is_foundational(n) and (not is_terminal(n)) and (not is_passage(n))
-
+	# return is_foundational(n) and (not is_terminal(n)) and (not is_passage(n))
+	return is_foundational(n) and not is_passage(n)
 
 def top_from_passage(p):
 	"""returns the top elements from a passage"""
@@ -116,7 +117,7 @@ def align(sen1, sen2, string=True):
 
 
 def _to_text(passage, position):
-	""" returns the text og the position in the passage"""
+	""" returns the text of the position in the passage"""
 	return passage.layer(layer0.LAYER_ID).by_position(position).text
 
 
@@ -431,7 +432,8 @@ def fully_aligned_distance(p1, p2):
 
 	count1 = len(set((i,j) for (i,j) in first.items() if compare(i,j)))
 	count2 = len(set((i,j) for (i,j) in second.items() if compare(i,j)))
-	print(inspect.currentframe().f_code.co_name," returns ", two_sided_f(count1, count2, len(nodes1), len(nodes2)))
+	# print(inspect.currentframe().f_code.co_name," returns ", two_sided_f(count1, count2, len(nodes1), len(nodes2)))
+	# print("ref to source ", count1/len(nodes1), "source to ref", count2/len(nodes2))
 	return two_sided_f(count1, count2, len(nodes1), len(nodes2))
 
 
@@ -446,10 +448,10 @@ def token_matches(p1, p2, map_by):
 	"""returns the number of matched tokens from p1 with tag from MAIN_RELATIONS
 		p1,p2 passages
 		map_by a function that maps all nodes from p1 to p2 nodes
-		Note: this function is noy simmetrical"""
+		Note: this function is not simmetrical"""
 	count = 0
 	mapping = map_by(p1, p2)
-	print("mapping length", len(mapping))
+	# print("mapping length", len(mapping))
 	for node1, node2 in mapping.items():
 		if (is_comparable(node1) and is_comparable(node2) and
 		    label(node1) in MAIN_RELATIONS and compare(node1, node2)):
@@ -465,10 +467,10 @@ def token_distance(p1, p2, map_by=buttom_up_by_levels_align):
 				 if is_comparable(node) and label(node) in MAIN_RELATIONS)
 	nodes2 = set(node for node in p2.layer(layer1.LAYER_ID).all 
 				 if is_comparable(node) and label(node) in MAIN_RELATIONS)
-	print(inspect.currentframe().f_code.co_name)
-	print("counts", count1, count2)
-	print("lens", len(nodes1), len(nodes2))
-	print(two_sided_f(count1, count2, len(nodes1), len(nodes2)))
+	# print(inspect.currentframe().f_code.co_name)
+	# print("counts", count1, count2)
+	# print("lens", len(nodes1), len(nodes2))
+	# print(two_sided_f(count1, count2, len(nodes1), len(nodes2)))
 	return two_sided_f(count1, count2, len(nodes1), len(nodes2))
 
 
@@ -538,7 +540,6 @@ def prune_leaves(tree, flter=lambda x:True):
 		return(tree[0], [n for n in res if n is not None])
 	return
 
-
 def create_ordered_trees(p1, p2, word2word=None):
 	""" creates two trees from two passages"""
 	if not word2word:
@@ -548,17 +549,26 @@ def create_ordered_trees(p1, p2, word2word=None):
 	mapping = align_nodes(top1, top2, word2word)
 	tree1 = []
 	tree2 = []
+	print("top1", top1)
+	if not top1:
+		print("warning no top was found in the passage", " ".join([x.text for x in extract_terminals(p1)]), file=sys.stderr)
+		top1 = p1.layer(layer1.LAYER_ID).all
+		print("p1", " ".join([x.text for x in extract_terminals(p1)]), file=sys.stderr)
+	if not top2:
+		print("warning no top was found in the passage", " ".join([x.text for x in extract_terminals(p2)]), file=sys.stderr)
+		top2 = p2.layer(layer1.LAYER_ID).all
+		print("p2", " ".join([x.text for x in extract_terminals(p2)]), file=sys.stderr)
 	# add the top nodes
 		# matching nodes
-	for s in top_from_passage(p1):
+	for s in top1:
 		if s in mapping and mapping[s] not in tree2:
 			tree1.append(s)
 			tree2.append(mapping[s])
 		# unmatched nodes from each passage
-	for s in top_from_passage(p1):
+	for s in top1:
 		if s not in tree1:
 			tree1.append(s)
-	for s in top_from_passage(p2):
+	for s in top2:
 		if s not in tree2:
 			tree2.append(s)
 
@@ -567,6 +577,13 @@ def create_ordered_trees(p1, p2, word2word=None):
 	shorter = min(len(top1), len(top2))
 	res1 = []
 	res2 = []
+	# if shorter < 1:
+	# 	print("word2word", word2word)
+	# 	print("top1", top1)
+	# 	print("top2", top2)
+	# 	print([x.text for x in extract_terminals(p1)])
+	# 	print("shorter is ", shorter, "top1 is shorter?" , len(top2) == longer, "or top2", len(top1) == longer)
+	# 	raise
 	for i in range(shorter):
 		t1, t2 = tree_structure_aligned(tree1[i], tree2[i], word2word)
 		res1.append(t1)
@@ -577,8 +594,8 @@ def create_ordered_trees(p1, p2, word2word=None):
 		res2 = res2 + [tree_structure(n) for n in top2[shorter:]]
 	res1 = prune_leaves((p1, res1))
 	res2 = prune_leaves((p2, res2))
-	res1 = prune_leaves(res1, lambda x: not is_comparable(x))
-	res2 = prune_leaves(res2, lambda x: not is_comparable(x))
+	res1 = prune_leaves(res1, lambda x: not is_comparable(x)) if res1 else res1
+	res2 = prune_leaves(res2, lambda x: not is_comparable(x)) if res1 else res1
 	return res1, res2
 
 
@@ -615,9 +632,14 @@ def token_level_analysis(ps):
 	R = {}
 	res = {}
 	for tag in MAIN_RELATIONS + [ADs]:
-		P[tag] = s[tag]/f[tag]
-		R[tag] = s[tag]/e[tag]
-		res[tag] = 2*(P[tag]*R[tag])/(P[tag] + R[tag])
+		if s[tag] == 0:
+			P[tag] = 0
+			R[tag] = 0
+			res[tag] = 0
+		else:	
+			P[tag] = s[tag]/f[tag]
+			R[tag] = s[tag]/e[tag]
+			res[tag] = 2*(P[tag]*R[tag])/(P[tag] + R[tag])
 	
 	return res	
 
@@ -661,10 +683,10 @@ def aligned_top_down_distance(p1, p2):
 
 	# overall1 = set(node for node in p1.layer(layer1.LAYER_ID).all if is_comparable(node))
 	# overall2 = set(node for node in p2.layer(layer1.LAYER_ID).all if is_comparable(node))
-	print(inspect.currentframe().f_code.co_name)
-	print(len(set(node for node in p1.layer(layer1.LAYER_ID).all if is_comparable(node))))
-	print(len(set(node for node in p2.layer(layer1.LAYER_ID).all if is_comparable(node))))
-	print("counts",len(cut1), len(cut2))
-	print("lens",len(overall1), len(overall2))
-	print(two_sided_f(len(cut1), len(cut2), len(overall1), len(overall2)))
+	# print(inspect.currentframe().f_code.co_name)
+	# print(len(set(node for node in p1.layer(layer1.LAYER_ID).all if is_comparable(node))))
+	# print(len(set(node for node in p2.layer(layer1.LAYER_ID).all if is_comparable(node))))
+	# print("counts",len(cut1), len(cut2))
+	# print("lens",len(overall1), len(overall2))
+	# print(two_sided_f(len(cut1), len(cut2), len(overall1), len(overall2)))
 	return two_sided_f(len(cut1), len(cut2), len(overall1), len(overall2))
