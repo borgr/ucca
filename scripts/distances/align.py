@@ -4,7 +4,7 @@ import distance
 from munkres import Munkres, print_matrix
 import numpy as np
 from textutil import break2sentences, extract_terminals
-import evaluation
+from ucca.evaluation import expand_equivalents
 import re
 import sys
 import string
@@ -19,7 +19,7 @@ def compare(n1, n2):
 
 
 def labels(n):
-	return evaluation.expand_equivalents(set(e.tag for e in n.incoming))
+	return expand_equivalents(set(e.tag for e in n.incoming))
 
 
 def label(n):
@@ -556,7 +556,7 @@ def create_ordered_trees(p1, p2, word2word=None):
 		print("p1", " ".join([x.text for x in extract_terminals(p1)]), file=sys.stderr)
 	if not top2:
 		print("warning no top was found in the passage", " ".join([x.text for x in extract_terminals(p2)]), file=sys.stderr)
-		top2 = p2.layer(layer1.LAYER_ID).all
+		top2 = p2.layer(layer1.LAYER_IDz).all
 		print("p2", " ".join([x.text for x in extract_terminals(p2)]), file=sys.stderr)
 	# add the top nodes
 		# matching nodes
