@@ -410,7 +410,7 @@ def align_yields(p1, p2):
             sentence_start2 = positions2[i]
         return mapping
     else:
-        print("Error number of sentences aqquired from break2common_sentences dow not match")
+        print("Error number of sentences aqquired from break2common_sentences does not match")
 
 
 def fully_aligned_distance(p1, p2):
